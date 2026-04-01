@@ -152,7 +152,7 @@ Open an issue or contribute to the project.
 ## 📈 Changelog
 
 Full commit history:
-https://github.com/SRGuyYT/grubedX/commits/
+https://github.com/SRGuyYT/grubX/commits/
 
 ---
 
