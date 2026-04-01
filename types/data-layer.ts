@@ -43,8 +43,16 @@ export type SavePlaybackProgressInput = {
 export interface DataLayer {
   loadSettings(scope: SettingsScope): Promise<Settings>;
   saveSettings(scope: SettingsScope, settings: Partial<Settings>): Promise<Settings>;
-  subscribeWatchlist(scope: SettingsScope, onChange: (items: WatchlistItem[]) => void): () => void;
-  subscribeContinueWatching(scope: SettingsScope, onChange: (items: PlaybackProgress[]) => void): () => void;
+  subscribeWatchlist(
+    scope: SettingsScope,
+    onChange: (items: WatchlistItem[]) => void,
+    onError?: (error: Error) => void,
+  ): () => void;
+  subscribeContinueWatching(
+    scope: SettingsScope,
+    onChange: (items: PlaybackProgress[]) => void,
+    onError?: (error: Error) => void,
+  ): () => void;
   getPlaybackProgress(scope: SettingsScope, mediaId: string): Promise<PlaybackProgress | null>;
   savePlaybackProgress(scope: SettingsScope, input: SavePlaybackProgressInput): Promise<void>;
   toggleWatchlist(

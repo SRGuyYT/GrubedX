@@ -1,11 +1,12 @@
 "use client";
 
-import { EmptyState } from "@/components/feedback/EmptyState";
 import { MediaRow } from "@/components/media/MediaRow";
+import { useSettingsContext } from "@/context/SettingsContext";
 import { useContinueWatchingSubscription } from "@/hooks/useContinueWatchingSubscription";
 import type { MediaItem } from "@/types/media";
 
 export function ContinueWatchingRow() {
+  const { ready } = useSettingsContext();
   const query = useContinueWatchingSubscription();
   const items = (query.data ?? []).map(
     (item) =>
@@ -26,13 +27,8 @@ export function ContinueWatchingRow() {
       }) satisfies MediaItem,
   );
 
-  if (items.length === 0) {
-    return (
-      <EmptyState
-        title="No continue watching items"
-        description="Start a movie or show and GrubX will keep your most recent progress here."
-      />
-    );
+  if (!ready || query.isBootstrapping || items.length === 0) {
+    return null;
   }
 
   return (

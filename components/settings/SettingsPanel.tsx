@@ -35,7 +35,7 @@ function SettingRow({
 
 export function SettingsPanel() {
   const [isPending, startTransition] = useTransition();
-  const { ready, settings, setGuestMode, updateSettings } = useSettingsContext();
+  const { ready, error, settings, setGuestMode, updateSettings } = useSettingsContext();
   const { user, session } = useSession();
 
   if (!ready) {
@@ -59,6 +59,12 @@ export function SettingsPanel() {
             </p>
           </div>
         </div>
+
+        {error ? (
+          <div className="mb-6 rounded-[1.4rem] border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+            Settings fell back to safe defaults because the active mode store could not be read: {error}
+          </div>
+        ) : null}
 
         <div className="space-y-4">
           <SettingRow

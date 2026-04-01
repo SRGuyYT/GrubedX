@@ -1,11 +1,12 @@
 "use client";
 
-import { EmptyState } from "@/components/feedback/EmptyState";
 import { MediaRow } from "@/components/media/MediaRow";
+import { useSettingsContext } from "@/context/SettingsContext";
 import { useWatchlistSubscription } from "@/hooks/useWatchlistSubscription";
 import type { MediaItem } from "@/types/media";
 
 export function WatchlistRow() {
+  const { ready } = useSettingsContext();
   const query = useWatchlistSubscription();
   const items = (query.data ?? []).map(
     (item) =>
@@ -23,13 +24,8 @@ export function WatchlistRow() {
       }) satisfies MediaItem,
   );
 
-  if (items.length === 0) {
-    return (
-      <EmptyState
-        title="Watchlist is empty"
-        description="Use the card actions or title pages to add movies and shows to your active mode."
-      />
-    );
+  if (!ready || query.isBootstrapping || items.length === 0) {
+    return null;
   }
 
   return <MediaRow title="Watchlist" description="Realtime from your active storage mode." items={items} />;

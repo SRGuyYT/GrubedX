@@ -127,7 +127,7 @@ export const dataLayer: DataLayer = {
     return nextSettings;
   },
 
-  subscribeWatchlist(scope, onChange) {
+  subscribeWatchlist(scope, onChange, onError) {
     if (scope.mode === "guest") {
       onChange(getGuestWatchlist());
       return () => undefined;
@@ -138,10 +138,16 @@ export const dataLayer: DataLayer = {
       collection(getFirestoreDb(), "users", uid, "watchlist"),
       orderBy("addedAt", "desc"),
     );
-    return onSnapshot(watchlistQuery, (snapshot) => onChange(normalizeWatchlistSnapshot(snapshot.docs)));
+    return onSnapshot(
+      watchlistQuery,
+      (snapshot) => onChange(normalizeWatchlistSnapshot(snapshot.docs)),
+      (error) => {
+        onError?.(error);
+      },
+    );
   },
 
-  subscribeContinueWatching(scope, onChange) {
+  subscribeContinueWatching(scope, onChange, onError) {
     if (scope.mode === "guest") {
       const guestItems = Object.values(getGuestProgressMap()).sort((left, right) =>
         right.updatedAt.localeCompare(left.updatedAt),
@@ -155,7 +161,13 @@ export const dataLayer: DataLayer = {
       collection(getFirestoreDb(), "users", uid, "progress"),
       orderBy("updatedAt", "desc"),
     );
-    return onSnapshot(progressQuery, (snapshot) => onChange(normalizeProgressSnapshot(snapshot.docs)));
+    return onSnapshot(
+      progressQuery,
+      (snapshot) => onChange(normalizeProgressSnapshot(snapshot.docs)),
+      (error) => {
+        onError?.(error);
+      },
+    );
   },
 
   async getPlaybackProgress(scope, mediaId) {

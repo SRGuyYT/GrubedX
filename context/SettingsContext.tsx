@@ -17,6 +17,7 @@ import type { AppDataMode, Settings, SettingsScope } from "@/types/settings";
 
 type SettingsContextValue = {
   ready: boolean;
+  error: string | null;
   mode: AppDataMode;
   scope: SettingsScope;
   settings: Settings;
@@ -33,6 +34,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const { initialized, session } = useSession();
   const [ready, setReady] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [mode, setMode] = useState<AppDataMode>("guest");
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
 
@@ -47,25 +49,35 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
       const canUseAccount = session.status === "authenticated" && !!session.firebaseUid;
       const preferredMode = canUseAccount ? readPreferredMode() : "guest";
-      const nextMode =
-        canUseAccount && preferredMode !== "guest"
-          ? "account"
-          : canUseAccount && preferredMode === "guest"
-            ? "guest"
-            : "guest";
+      const nextMode: AppDataMode = canUseAccount ? (preferredMode === "guest" ? "guest" : "account") : "guest";
       const nextScope = buildScope(nextMode, session.firebaseUid);
-      const loadedSettings = await dataLayer.loadSettings(nextScope);
-      const resolvedSettings =
-        nextMode === "guest"
-          ? { ...loadedSettings, guestMode: true, allowPopups: false as const }
-          : { ...loadedSettings, guestMode: false, allowPopups: false as const };
+      try {
+        const loadedSettings = await dataLayer.loadSettings(nextScope);
+        const resolvedSettings =
+          nextMode === "guest"
+            ? { ...loadedSettings, guestMode: true, allowPopups: false as const }
+            : { ...loadedSettings, guestMode: false, allowPopups: false as const };
 
-      if (cancelled) {
-        return;
+        if (cancelled) {
+          return;
+        }
+
+        setMode(nextMode);
+        setSettings(resolvedSettings);
+        setError(null);
+      } catch (caughtError) {
+        if (cancelled) {
+          return;
+        }
+
+        setMode(nextMode);
+        setSettings(
+          nextMode === "guest"
+            ? { ...DEFAULT_SETTINGS, guestMode: true, allowPopups: false as const }
+            : { ...DEFAULT_SETTINGS, guestMode: false, allowPopups: false as const },
+        );
+        setError(caughtError instanceof Error ? caughtError.message : "Settings could not be loaded.");
       }
-
-      setMode(nextMode);
-      setSettings(resolvedSettings);
       setReady(true);
     };
 
@@ -81,6 +93,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const value = useMemo<SettingsContextValue>(
     () => ({
       ready,
+      error,
       mode,
       scope,
       settings,
@@ -89,12 +102,18 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
           mode === "guest"
             ? { ...settings, ...next, guestMode: true, allowPopups: false as const }
             : { ...settings, ...next, guestMode: false, allowPopups: false as const };
-        const persisted = await dataLayer.saveSettings(scope, merged);
-        setSettings(
-          mode === "guest"
-            ? { ...persisted, guestMode: true, allowPopups: false as const }
-            : { ...persisted, guestMode: false, allowPopups: false as const },
-        );
+        try {
+          const persisted = await dataLayer.saveSettings(scope, merged);
+          setSettings(
+            mode === "guest"
+              ? { ...persisted, guestMode: true, allowPopups: false as const }
+              : { ...persisted, guestMode: false, allowPopups: false as const },
+          );
+          setError(null);
+        } catch (caughtError) {
+          setError(caughtError instanceof Error ? caughtError.message : "Settings could not be saved.");
+          throw caughtError;
+        }
       },
       async setGuestMode(enabled) {
         if (!enabled && !(session.status === "authenticated" && session.firebaseUid)) {
@@ -106,17 +125,29 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         writePreferredMode(nextMode);
         dataLayer.clearModeScopedCache(queryClient, mode);
         const nextScope = buildScope(nextMode, session.firebaseUid);
-        const loadedSettings = await dataLayer.loadSettings(nextScope);
-        setMode(nextMode);
-        setSettings(
-          nextMode === "guest"
-            ? { ...loadedSettings, guestMode: true, allowPopups: false as const }
-            : { ...loadedSettings, guestMode: false, allowPopups: false as const },
-        );
-        setReady(true);
+        try {
+          const loadedSettings = await dataLayer.loadSettings(nextScope);
+          setMode(nextMode);
+          setSettings(
+            nextMode === "guest"
+              ? { ...loadedSettings, guestMode: true, allowPopups: false as const }
+              : { ...loadedSettings, guestMode: false, allowPopups: false as const },
+          );
+          setError(null);
+        } catch (caughtError) {
+          setMode(nextMode);
+          setSettings(
+            nextMode === "guest"
+              ? { ...DEFAULT_SETTINGS, guestMode: true, allowPopups: false as const }
+              : { ...DEFAULT_SETTINGS, guestMode: false, allowPopups: false as const },
+          );
+          setError(caughtError instanceof Error ? caughtError.message : "Mode settings could not be loaded.");
+        } finally {
+          setReady(true);
+        }
       },
     }),
-    [mode, queryClient, ready, scope, session.firebaseUid, session.status, settings],
+    [error, mode, queryClient, ready, scope, session.firebaseUid, session.status, settings],
   );
 
   return <SettingsContext.Provider value={value}>{children}</SettingsContext.Provider>;

@@ -71,14 +71,24 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      const provider = await deriveProvider(nextUser);
-      setSession({
-        status: "authenticated",
-        authProvider: provider.authProvider,
-        firebaseUid: nextUser.uid,
-        matrixUserId: provider.matrixUserId,
-      });
-      setInitialized(true);
+      try {
+        const provider = await deriveProvider(nextUser);
+        setSession({
+          status: "authenticated",
+          authProvider: provider.authProvider,
+          firebaseUid: nextUser.uid,
+          matrixUserId: provider.matrixUserId,
+        });
+      } catch {
+        setSession({
+          status: "authenticated",
+          authProvider: "firebase",
+          firebaseUid: nextUser.uid,
+          matrixUserId: null,
+        });
+      } finally {
+        setInitialized(true);
+      }
     });
 
     return unsubscribe;
@@ -103,25 +113,49 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       firebaseUser,
       user,
       async login(email, password) {
+        const previousSession = session;
         setSession((current) => ({ ...current, status: "authenticating" }));
-        await signInWithEmailAndPassword(getFirebaseAuth(), email.trim(), password);
+        try {
+          await signInWithEmailAndPassword(getFirebaseAuth(), email.trim(), password);
+        } catch (error) {
+          setSession(previousSession);
+          throw error;
+        }
       },
       async register(email, username, password) {
+        const previousSession = session;
         setSession((current) => ({ ...current, status: "authenticating" }));
-        const credential = await createUserWithEmailAndPassword(getFirebaseAuth(), email.trim(), password);
-        await updateProfile(credential.user, { displayName: username.trim() });
+        try {
+          const credential = await createUserWithEmailAndPassword(getFirebaseAuth(), email.trim(), password);
+          await updateProfile(credential.user, { displayName: username.trim() });
+        } catch (error) {
+          setSession(previousSession);
+          throw error;
+        }
       },
       async loginWithGithub() {
+        const previousSession = session;
         setSession((current) => ({ ...current, status: "authenticating" }));
-        await signInWithPopup(getFirebaseAuth(), githubProvider);
+        try {
+          await signInWithPopup(getFirebaseAuth(), githubProvider);
+        } catch (error) {
+          setSession(previousSession);
+          throw error;
+        }
       },
       async loginWithMatrix(input) {
+        const previousSession = session;
         setSession((current) => ({ ...current, status: "bridging" }));
-        await bridgeMatrixSession({
-          username: input.username.trim(),
-          password: input.password,
-          homeserverUrl: input.homeserverUrl?.trim(),
-        });
+        try {
+          await bridgeMatrixSession({
+            username: input.username.trim(),
+            password: input.password,
+            homeserverUrl: input.homeserverUrl?.trim(),
+          });
+        } catch (error) {
+          setSession(previousSession);
+          throw error;
+        }
       },
       async logout() {
         setSession(DEFAULT_SESSION);
