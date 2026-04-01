@@ -57,18 +57,18 @@ export function HeroCarousel({ items }: { items: MediaItem[] }) {
                 fill
                 priority={index === 0}
                 sizes="100vw"
-                className="object-cover"
+                className="scale-[1.04] object-cover object-center blur-[2px] brightness-[0.42]"
               />
             </div>
           ))}
         </div>
-        <div className="absolute inset-0 bg-gradient-to-r from-[#05070b] via-[#05070be5] to-[#05070b30]" />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#05070b] via-transparent to-[#05070b66]" />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#05070b] via-[#05070bf2] to-[#05070b45]" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#05070b] via-[#05070b88] to-[#05070b88]" />
 
-        <div className="page-shell relative flex min-h-[72vh] items-end py-16">
-          <div className="max-w-3xl">
+        <div className="page-shell relative flex min-h-[60vh] items-center py-16 md:min-h-[68vh]">
+          <div className="liquid-glass relative z-10 max-w-3xl rounded-[2rem] px-6 py-7 md:px-8 md:py-9">
             <p className="mb-4 text-xs uppercase tracking-[0.45em] text-[var(--muted)]">Trending Today</p>
-            <h1 className="max-w-2xl text-5xl font-semibold leading-none sm:text-6xl md:text-7xl">
+            <h1 className="max-w-2xl text-4xl font-semibold leading-none sm:text-5xl md:text-6xl">
               {activeItem.title}
             </h1>
             <p className="mt-5 max-w-2xl text-base leading-7 text-[var(--muted)] sm:text-lg">
@@ -97,7 +97,7 @@ export function HeroCarousel({ items }: { items: MediaItem[] }) {
             </div>
           </div>
 
-          <div className="absolute bottom-8 right-5 flex items-center gap-3">
+          <div className="absolute bottom-8 right-5 z-10 flex items-center gap-3">
             <button
               type="button"
               onClick={() => setActiveIndex((current) => (current === 0 ? items.length - 1 : current - 1))}

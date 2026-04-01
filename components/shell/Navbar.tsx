@@ -21,7 +21,7 @@ export function Navbar() {
   const { initialized, session, user, logout } = useSession();
 
   return (
-    <header className="sticky top-0 z-50 border-b border-white/8 bg-black/20 backdrop-blur-xl">
+    <header className="sticky top-0 z-50 border-b border-white/10 bg-[rgba(5,7,11,0.88)] shadow-[0_18px_48px_rgba(0,0,0,0.35)] backdrop-blur-xl">
       <div className="page-shell">
         <div className="flex min-h-20 items-center justify-between gap-4">
           <Link href="/" className="flex items-center gap-3">
@@ -29,8 +29,8 @@ export function Navbar() {
               <Image src="/64x64.png" alt="GrubX" fill sizes="48px" className="object-cover" priority />
             </div>
             <div>
-              <p className="text-sm uppercase tracking-[0.3em] text-[var(--muted)]">Streaming Shell</p>
-              <p className="text-2xl font-semibold tracking-tight">GrubX</p>
+              <p className="text-xs uppercase tracking-[0.35em] text-[var(--muted)]">Streaming Shell</p>
+              <p className="text-xl font-semibold tracking-tight text-white">GrubX</p>
             </div>
           </Link>
 

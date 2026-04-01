@@ -102,6 +102,13 @@ ensure_build_output() {
   build_app
 }
 
+refresh_build_output() {
+  ensure_pnpm
+  ensure_env_file
+  log "Refreshing Next.js production build before server start..."
+  run_pnpm build
+}
+
 start_dev() {
   ensure_pnpm
   ensure_env_file
@@ -122,7 +129,7 @@ start_server() {
 
   ensure_pnpm
   ensure_env_file
-  ensure_build_output
+  refresh_build_output
 
   log "Starting Next.js ${mode} server on ${HOST}:${port} (${domain})..."
   exec "${PNPM_CMD[@]}" exec next start -H "${HOST}" -p "${port}"

@@ -62,14 +62,14 @@ export default async function TitlePage({
             fill
             priority
             sizes="100vw"
-            className="object-cover"
+            className="scale-[1.03] object-cover object-center blur-[2px] brightness-[0.38]"
           />
         </div>
-        <div className="absolute inset-0 bg-gradient-to-r from-[#05070b] via-[#05070bd9] to-[#05070b1a]" />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#05070b] via-transparent to-[#05070b88]" />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#05070b] via-[#05070bf2] to-[#05070b30]" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#05070b] via-[#05070b99] to-[#05070b80]" />
 
-        <div className="page-shell relative flex min-h-[72vh] items-end py-14">
-          <div className="grid gap-8 lg:grid-cols-[280px,1fr] lg:items-end">
+        <div className="page-shell relative z-10 flex min-h-[60vh] items-center py-16 md:min-h-[68vh]">
+          <div className="grid w-full gap-8 lg:grid-cols-[300px,1fr] lg:items-center">
             <div className="liquid-glass-soft hidden overflow-hidden rounded-[2rem] border border-white/10 lg:block">
               <div className="relative aspect-[2/3]">
                 <Image
@@ -82,9 +82,9 @@ export default async function TitlePage({
               </div>
             </div>
 
-            <div>
+            <div className="liquid-glass rounded-[2rem] px-6 py-7 md:px-8 md:py-9">
               <p className="text-xs uppercase tracking-[0.32em] text-[var(--muted)]">{media.mediaType}</p>
-              <h1 className="mt-3 text-5xl font-semibold sm:text-6xl">{media.title}</h1>
+              <h1 className="mt-3 text-4xl font-semibold leading-none sm:text-5xl md:text-6xl">{media.title}</h1>
               {media.tagline ? <p className="mt-4 text-xl text-white/80">{media.tagline}</p> : null}
               <div className="mt-5 flex flex-wrap items-center gap-3 text-sm text-[var(--muted)]">
                 {media.rating ? (
