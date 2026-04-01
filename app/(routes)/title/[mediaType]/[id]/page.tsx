@@ -68,55 +68,57 @@ export default async function TitlePage({
         <div className="absolute inset-0 bg-gradient-to-r from-[#05070b] via-[#05070bf2] to-[#05070b30]" />
         <div className="absolute inset-0 bg-gradient-to-t from-[#05070b] via-[#05070b99] to-[#05070b80]" />
 
-        <div className="page-shell relative z-10 flex min-h-[60vh] items-center py-16 md:min-h-[68vh]">
-          <div className="grid w-full gap-8 lg:grid-cols-[300px,1fr] lg:items-center">
-            <div className="liquid-glass-soft hidden overflow-hidden rounded-[2rem] border border-white/10 lg:block">
-              <div className="relative aspect-[2/3]">
-                <Image
-                  src={media.posterPath ? `https://image.tmdb.org/t/p/w500${media.posterPath}` : "/512x512.png"}
-                  alt={media.title}
-                  fill
-                  sizes="280px"
-                  className="object-cover"
-                />
-              </div>
-            </div>
+        <div className="page-shell relative z-10 py-10 md:py-12">
+          <div className="liquid-glass rounded-[2rem] px-6 py-7 md:px-8 md:py-8">
+            <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between lg:gap-8">
+              <div className="max-w-3xl flex-1">
+                <p className="text-xs uppercase tracking-[0.32em] text-[var(--muted)]">{media.mediaType}</p>
+                <h1 className="mt-3 text-4xl font-semibold leading-none sm:text-5xl md:text-6xl">{media.title}</h1>
+                {media.tagline ? <p className="mt-4 text-xl text-white/80">{media.tagline}</p> : null}
+                <div className="mt-5 flex flex-wrap items-center gap-3 text-sm text-[var(--muted)]">
+                  {media.rating ? (
+                    <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/25 px-3 py-2">
+                      <Star className="size-4 fill-[var(--accent)] text-[var(--accent)]" />
+                      {media.rating.toFixed(1)}
+                    </span>
+                  ) : null}
+                  {media.releaseDate ? (
+                    <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/25 px-3 py-2">
+                      <CalendarDays className="size-4" />
+                      {new Date(media.releaseDate).getFullYear()}
+                    </span>
+                  ) : null}
+                  {media.runtime ? (
+                    <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/25 px-3 py-2">
+                      <Clock3 className="size-4" />
+                      {media.runtime} min
+                    </span>
+                  ) : null}
+                  {media.totalSeasons ? (
+                    <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/25 px-3 py-2">
+                      <Layers3 className="size-4" />
+                      {media.totalSeasons} seasons
+                    </span>
+                  ) : null}
+                </div>
 
-            <div className="liquid-glass rounded-[2rem] px-6 py-7 md:px-8 md:py-9">
-              <p className="text-xs uppercase tracking-[0.32em] text-[var(--muted)]">{media.mediaType}</p>
-              <h1 className="mt-3 text-4xl font-semibold leading-none sm:text-5xl md:text-6xl">{media.title}</h1>
-              {media.tagline ? <p className="mt-4 text-xl text-white/80">{media.tagline}</p> : null}
-              <div className="mt-5 flex flex-wrap items-center gap-3 text-sm text-[var(--muted)]">
-                {media.rating ? (
-                  <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/25 px-3 py-2">
-                    <Star className="size-4 fill-[var(--accent)] text-[var(--accent)]" />
-                    {media.rating.toFixed(1)}
-                  </span>
-                ) : null}
-                {media.releaseDate ? (
-                  <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/25 px-3 py-2">
-                    <CalendarDays className="size-4" />
-                    {new Date(media.releaseDate).getFullYear()}
-                  </span>
-                ) : null}
-                {media.runtime ? (
-                  <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/25 px-3 py-2">
-                    <Clock3 className="size-4" />
-                    {media.runtime} min
-                  </span>
-                ) : null}
-                {media.totalSeasons ? (
-                  <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/25 px-3 py-2">
-                    <Layers3 className="size-4" />
-                    {media.totalSeasons} seasons
-                  </span>
-                ) : null}
+                <p className="mt-6 max-w-3xl text-base leading-8 text-[var(--muted)]">{media.overview}</p>
+
+                <div className="mt-7">
+                  <TitleActions media={media} />
+                </div>
               </div>
 
-              <p className="mt-6 max-w-3xl text-base leading-8 text-[var(--muted)]">{media.overview}</p>
-
-              <div className="mt-7">
-                <TitleActions media={media} />
+              <div className="mx-auto w-full max-w-[220px] shrink-0 overflow-hidden rounded-[1.6rem] border border-white/10 bg-black/35 lg:mx-0">
+                <div className="relative aspect-[2/3]">
+                  <Image
+                    src={media.posterPath ? `https://image.tmdb.org/t/p/w500${media.posterPath}` : "/512x512.png"}
+                    alt={media.title}
+                    fill
+                    sizes="220px"
+                    className="object-cover"
+                  />
+                </div>
               </div>
             </div>
           </div>
