@@ -8,8 +8,10 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="grain min-h-screen overflow-x-hidden">
       <Navbar />
-      <GuestModeBanner />
-      <main>{children}</main>
+      <div className="pt-28 md:pt-32">
+        <GuestModeBanner />
+        <main>{children}</main>
+      </div>
       <Footer />
     </div>
   );

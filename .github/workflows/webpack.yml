@@ -34,6 +34,6 @@ jobs:
         pnpm install
         pnpm build
       env:
-        # Add these so the build doesn't crash from your strict vite.config.ts
-        PORT: 3000
+        # Keep CI aligned with the single-port runtime used by manage.sh
+        PORT: 9000
         BASE_PATH: /
