@@ -1,174 +1,250 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, Search, Settings, UserRound, X } from "lucide-react";
+import {
+  ArrowUpCircle,
+  Clapperboard,
+  Home,
+  Menu,
+  MonitorPlay,
+  Search,
+  Settings2,
+  Tv,
+  X,
+} from "lucide-react";
 
+import { LiveClock } from "@/components/shell/LiveClock";
 import { cn } from "@/lib/cn";
-import { useSession } from "@/context/SessionContext";
+import { useUpdateStatus } from "@/hooks/useUpdateStatus";
 
-const navLinks = [
-  { href: "/", label: "Home" },
-  { href: "/movies", label: "Movies" },
-  { href: "/tv", label: "TV" },
-  { href: "/live", label: "Live TV" },
-  { href: "/search", label: "Search" },
-  { href: "/settings", label: "Settings" },
+type NavItem = {
+  href: string;
+  label: string;
+  icon: typeof Home;
+};
+
+const navItems: NavItem[] = [
+  { href: "/", label: "Home", icon: Home },
+  { href: "/movies", label: "Movies", icon: Clapperboard },
+  { href: "/tv", label: "TV", icon: Tv },
+  { href: "/live", label: "Live TV", icon: MonitorPlay },
+  { href: "/search", label: "Search", icon: Search },
+  { href: "/settings", label: "Settings", icon: Settings2 },
 ];
 
-export function Navbar() {
-  const [open, setOpen] = useState(false);
-  const pathname = usePathname();
-  const { initialized, session, user, logout } = useSession();
-  const isActiveLink = (href: string) => href === "/" ? pathname === href : pathname.startsWith(href);
+const isActivePath = (pathname: string, href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
+
+function NavButton({
+  item,
+  pathname,
+  compact = false,
+  showUpdateDot = false,
+  onClick,
+}: {
+  item: NavItem;
+  pathname: string;
+  compact?: boolean;
+  showUpdateDot?: boolean;
+  onClick?: () => void;
+}) {
+  const Icon = item.icon;
+  const active = isActivePath(pathname, item.href);
 
   return (
-    <div className="pointer-events-none fixed top-4 left-0 right-0 z-50 mx-auto w-full max-w-[1480px] px-4 transition-all md:px-6">
-      <header className="pointer-events-auto relative overflow-hidden rounded-[2rem] border border-white/10 bg-[linear-gradient(180deg,rgba(14,20,34,0.92),rgba(8,12,21,0.88))] shadow-[0_22px_48px_rgba(0,0,0,0.42)] backdrop-blur-xl">
-        <div className="flex items-center justify-between px-5 py-4 md:px-6">
-          <Link href="/" className="flex items-center gap-3">
-            <div className="relative size-10 overflow-hidden rounded-[0.9rem] border border-white/10 bg-black/30 shadow-[0_10px_28px_rgba(0,0,0,0.3)]">
-              <Image src="/64x64.png" alt="GrubX" fill sizes="40px" className="object-cover" priority />
-            </div>
-            <div>
-              <p className="mb-1 text-[10px] leading-none tracking-[0.3em] text-[var(--muted)] uppercase">Streaming Shell</p>
-              <p className="text-lg font-semibold leading-none tracking-tight text-white">GrubX</p>
-            </div>
-          </Link>
+    <Link
+      href={item.href}
+      onClick={onClick}
+      className={cn(
+        "group relative flex items-center gap-3 rounded-[1.25rem] border transition",
+        compact ? "justify-center px-3 py-3.5" : "px-4 py-3.5",
+        active
+          ? "border-[var(--accent)] bg-[var(--accent-soft)] text-white shadow-[0_10px_30px_rgba(255,106,61,0.14)]"
+          : "border-white/8 bg-white/5 text-[var(--muted)] hover:border-white/15 hover:bg-white/8 hover:text-white active:scale-[0.98]",
+      )}
+    >
+      <Icon className={cn("size-5 shrink-0", active ? "text-[var(--accent)]" : "text-current")} />
+      {!compact ? <span className="font-medium">{item.label}</span> : null}
+      {showUpdateDot ? (
+        <span className="absolute right-3 top-3 inline-flex size-2.5 rounded-full bg-[var(--accent)] shadow-[0_0_16px_rgba(255,106,61,0.45)]" />
+      ) : null}
+    </Link>
+  );
+}
 
-          <nav className="hidden items-center gap-1 lg:flex">
-            {navLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={cn(
-                  "rounded-full px-4 py-2 text-sm font-medium transition",
-                  isActiveLink(link.href)
-                    ? "bg-white/10 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
-                    : "text-[var(--muted)] hover:bg-white/8 hover:text-white",
-                )}
-              >
-                {link.label}
-              </Link>
-            ))}
-          </nav>
+function BrandBlock({ compact = false }: { compact?: boolean }) {
+  return (
+    <Link
+      href="/"
+      className={cn(
+        "flex items-center rounded-[1.5rem] border border-white/10 bg-white/5 transition hover:border-white/15 hover:bg-white/7",
+        compact ? "justify-center p-3" : "gap-3 px-4 py-4",
+      )}
+    >
+      <div className="relative size-11 overflow-hidden rounded-[1rem] border border-white/10 bg-black/40 shadow-[0_10px_28px_rgba(0,0,0,0.28)]">
+        <Image src="/64x64.png" alt="GrubX" fill sizes="44px" className="object-cover" priority />
+      </div>
+      {!compact ? (
+        <div>
+          <p className="text-[10px] uppercase tracking-[0.34em] text-[var(--muted)]">Streaming Shell</p>
+          <p className="mt-1 text-lg font-semibold text-white">GrubX</p>
+        </div>
+      ) : null}
+    </Link>
+  );
+}
 
-          <div className="hidden items-center gap-3 lg:flex">
-            <Link
-              href="/search"
-              className="rounded-full border border-white/10 p-2.5 text-[var(--muted)] transition hover:border-white/20 hover:text-white"
-              aria-label="Search"
+export function Navbar() {
+  const pathname = usePathname();
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const updateQuery = useUpdateStatus(true);
+
+  const showUpdateDot = useMemo(
+    () =>
+      Boolean(
+        updateQuery.data?.hasUpdate &&
+          updateQuery.data.dismissedVersion !== updateQuery.data.latestVersion &&
+          updateQuery.data.latestVersion,
+      ),
+    [updateQuery.data],
+  );
+
+  return (
+    <>
+      <header className="fixed inset-x-0 top-0 z-50 border-b border-white/8 bg-[rgba(5,8,18,0.82)] backdrop-blur-xl md:hidden">
+        <div className="flex items-center justify-between px-4 py-3">
+          <BrandBlock />
+          <div className="flex items-center gap-2">
+            <LiveClock compact />
+            <button
+              type="button"
+              onClick={() => setMobileOpen((value) => !value)}
+              className="rounded-full border border-white/10 bg-white/5 p-3 text-[var(--muted)] transition hover:text-white"
+              aria-label="Toggle navigation"
             >
-              <Search className="size-4" />
-            </Link>
-
-            {!initialized ? (
-              <div className="h-10 w-32 animate-pulse rounded-full bg-white/10" />
-            ) : session.status === "authenticated" && user ? (
-              <>
-                <div className="rounded-full border border-white/5 bg-white/5 px-4 py-2 text-sm font-medium text-white">
-                  {user.username}
-                </div>
-                <Link
-                  href="/settings"
-                  className="rounded-full border border-white/10 p-2.5 text-[var(--muted)] transition hover:border-white/20 hover:text-white"
-                  aria-label="Settings"
-                >
-                  <Settings className="size-4" />
-                </Link>
-                <button
-                  type="button"
-                  onClick={() => void logout()}
-                  className="rounded-full bg-[var(--accent)] px-5 py-2 text-sm font-semibold text-black transition hover:brightness-110"
-                >
-                  Log out
-                </button>
-              </>
-            ) : (
-              <>
-                <Link href="/login" className="rounded-full px-4 py-2 text-sm font-medium text-[var(--muted)] transition hover:text-white">
-                  Log in
-                </Link>
-                <Link
-                  href="/register"
-                  className="rounded-full bg-[var(--accent)] px-5 py-2.5 text-sm font-semibold text-black transition hover:brightness-110"
-                >
-                  Create account
-                </Link>
-              </>
-            )}
+              {mobileOpen ? <X className="size-5" /> : <Menu className="size-5" />}
+            </button>
           </div>
-
-          <button
-            type="button"
-            onClick={() => setOpen((value) => !value)}
-            className="rounded-full border border-white/10 p-2.5 text-[var(--muted)] transition hover:text-white lg:hidden"
-            aria-label="Toggle menu"
-          >
-            {open ? <X className="size-5" /> : <Menu className="size-5" />}
-          </button>
         </div>
 
         <div
           className={cn(
-            "overflow-hidden transition-all duration-300 ease-in-out lg:hidden",
-            open ? "border-t border-white/10 max-h-[420px] opacity-100" : "max-h-0 opacity-0"
+            "overflow-hidden border-t border-white/8 transition-all duration-300",
+            mobileOpen ? "max-h-[540px] opacity-100" : "max-h-0 opacity-0",
           )}
         >
-          <div className="flex flex-col gap-2 px-6 py-4">
-            {navLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                onClick={() => setOpen(false)}
-                className="rounded-xl bg-white/5 px-4 py-3 text-sm font-medium text-white transition hover:bg-white/10"
-              >
-                {link.label}
-              </Link>
+          <div className="space-y-3 px-4 py-4">
+            {navItems.map((item) => (
+              <NavButton
+                key={item.href}
+                item={item}
+                pathname={pathname}
+                showUpdateDot={item.href === "/settings" && showUpdateDot}
+                onClick={() => setMobileOpen(false)}
+              />
             ))}
-
-            <div className="my-2 h-px bg-white/10" />
-
-            {!initialized ? null : session.status === "authenticated" && user ? (
-              <>
-                <div className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-white">
-                  <UserRound className="size-4 text-[var(--accent)]" />
-                  <span>{user.email}</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setOpen(false);
-                    void logout();
-                  }}
-                  className="rounded-xl bg-[var(--accent)] px-4 py-3 text-left text-sm font-semibold text-black transition hover:brightness-110"
-                >
-                  Log out
-                </button>
-              </>
-            ) : (
-              <>
-                <Link
-                  href="/login"
-                  onClick={() => setOpen(false)}
-                  className="rounded-xl bg-white/5 px-4 py-3 text-sm font-medium text-white transition hover:bg-white/10"
-                >
-                  Log in
-                </Link>
-                <Link
-                  href="/register"
-                  onClick={() => setOpen(false)}
-                  className="rounded-xl bg-[var(--accent)] px-4 py-3 text-sm font-semibold text-black transition hover:brightness-110"
-                >
-                  Create account
-                </Link>
-              </>
-            )}
+            <div className="rounded-[1.3rem] border border-white/8 bg-white/5 px-4 py-4 text-sm text-[var(--muted)]">
+              <p className="text-xs uppercase tracking-[0.28em]">Keyboard</p>
+              <p className="mt-2">Press / to jump into search. Press Esc to close any open modal.</p>
+            </div>
           </div>
         </div>
       </header>
-    </div>
+
+      <aside className="fixed inset-y-0 left-0 z-40 hidden w-24 border-r border-white/8 bg-[rgba(5,8,18,0.72)] px-3 py-5 backdrop-blur-xl md:flex xl:hidden">
+        <div className="flex w-full flex-col items-center gap-4">
+          <BrandBlock compact />
+          <LiveClock compact />
+          <nav className="mt-4 flex w-full flex-col gap-3">
+            {navItems.map((item) => (
+              <NavButton
+                key={item.href}
+                item={item}
+                pathname={pathname}
+                compact
+                showUpdateDot={item.href === "/settings" && showUpdateDot}
+              />
+            ))}
+          </nav>
+        </div>
+      </aside>
+
+      <aside className="fixed inset-y-0 left-0 z-40 hidden w-80 border-r border-white/8 bg-[rgba(5,8,18,0.74)] px-5 py-6 backdrop-blur-xl xl:flex">
+        <div className="flex w-full flex-col gap-5">
+          <BrandBlock />
+          <div className="flex items-center justify-between gap-3 rounded-[1.5rem] border border-white/8 bg-white/5 px-4 py-3">
+            <div>
+              <p className="text-[10px] uppercase tracking-[0.3em] text-[var(--muted)]">Realtime</p>
+              <p className="mt-1 text-sm font-medium text-white">Local-first streaming shell</p>
+            </div>
+            <LiveClock />
+          </div>
+
+          <nav className="space-y-3">
+            {navItems.map((item) => (
+              <NavButton
+                key={item.href}
+                item={item}
+                pathname={pathname}
+                showUpdateDot={item.href === "/settings" && showUpdateDot}
+              />
+            ))}
+          </nav>
+
+          <div className="mt-auto space-y-3">
+            <Link
+              href="/search?focus=1"
+              className="flex items-center justify-between rounded-[1.35rem] border border-white/8 bg-white/5 px-4 py-4 text-sm text-[var(--muted)] transition hover:border-white/15 hover:text-white"
+            >
+              <span className="inline-flex items-center gap-3">
+                <Search className="size-4" />
+                Search all titles
+              </span>
+              <kbd className="rounded-full border border-white/10 px-2 py-1 text-[11px]">/</kbd>
+            </Link>
+
+            <div className="rounded-[1.5rem] border border-white/8 bg-white/5 px-4 py-4 text-sm text-[var(--muted)]">
+              <div className="flex items-center justify-between gap-3">
+                <span>App version</span>
+                <span className="font-semibold text-white">{updateQuery.data?.currentVersion ?? "4.0.0"}</span>
+              </div>
+              {showUpdateDot && updateQuery.data?.latestVersion ? (
+                <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-[var(--accent)]/40 bg-[var(--accent-soft)] px-3 py-2 text-xs text-white">
+                  <ArrowUpCircle className="size-4 text-[var(--accent)]" />
+                  Update {updateQuery.data.latestVersion} ready
+                </div>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-white/8 bg-[rgba(5,8,18,0.9)] px-2 py-2 backdrop-blur-xl md:hidden">
+        <div className="grid grid-cols-5 gap-2">
+          {navItems.slice(0, 5).map((item) => {
+            const Icon = item.icon;
+            const active = isActivePath(pathname, item.href);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  "relative flex flex-col items-center justify-center gap-1 rounded-[1.1rem] px-2 py-2 text-[11px] font-medium transition",
+                  active ? "bg-[var(--accent-soft)] text-white" : "text-[var(--muted)]",
+                )}
+              >
+                <Icon className={cn("size-4", active ? "text-[var(--accent)]" : "text-current")} />
+                <span>{item.label}</span>
+                {item.href === "/settings" && showUpdateDot ? (
+                  <span className="absolute right-3 top-2 inline-flex size-2 rounded-full bg-[var(--accent)]" />
+                ) : null}
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
+    </>
   );
 }

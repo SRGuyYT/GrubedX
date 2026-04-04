@@ -1,5 +1,3 @@
-import type { AppDataMode } from "@/types/settings";
-
 export const queryKeys = {
   hero: ["tmdb", "hero"] as const,
   list: (scope: string, values: Record<string, string | number | null | undefined>) =>
@@ -8,10 +6,12 @@ export const queryKeys = {
   season: (id: string, season: number) => ["tmdb", "season", id, season] as const,
   trailer: (mediaType: string, id: string) => ["tmdb", "trailer", mediaType, id] as const,
   genres: (mediaType: string) => ["tmdb", "genres", mediaType] as const,
-  settings: (mode: AppDataMode, uid?: string | null) => ["user", mode, uid ?? "guest", "settings"] as const,
-  watchlist: (mode: AppDataMode, uid?: string | null) => ["user", mode, uid ?? "guest", "watchlist"] as const,
-  continueWatching: (mode: AppDataMode, uid?: string | null) =>
-    ["user", mode, uid ?? "guest", "continue-watching"] as const,
-  progress: (mode: AppDataMode, uid: string | null | undefined, mediaId: string) =>
-    ["user", mode, uid ?? "guest", "progress", mediaId] as const,
+  search: (target: string, query: string) => ["tmdb", "search", target, query] as const,
+  settings: ["local", "settings"] as const,
+  watchlist: ["local", "watchlist"] as const,
+  continueWatching: ["local", "continue-watching"] as const,
+  progress: (mediaId: string) => ["local", "progress", mediaId] as const,
+  searchPreferences: ["local", "search-preferences"] as const,
+  updaterState: ["local", "updater-state"] as const,
+  updateStatus: ["system", "update-status"] as const,
 };

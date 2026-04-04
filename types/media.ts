@@ -1,4 +1,5 @@
 export type MediaType = "movie" | "tv";
+export type SearchTarget = "all" | MediaType;
 
 export type Genre = {
   id: number;

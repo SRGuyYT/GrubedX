@@ -1,18 +1,16 @@
 import type { ReactNode } from "react";
 
-import { GuestModeBanner } from "@/components/user/GuestModeBanner";
 import { Footer } from "@/components/shell/Footer";
 import { Navbar } from "@/components/shell/Navbar";
 
 export function AppShell({ children }: { children: ReactNode }) {
   return (
-    <div className="grain min-h-screen overflow-x-hidden pb-6">
+    <div className="grain min-h-screen overflow-x-hidden">
       <Navbar />
-      <div className="space-y-5 pt-28 md:space-y-7 md:pt-32">
-        <GuestModeBanner />
+      <div className="pb-24 pt-20 md:pl-24 md:pb-12 md:pt-8 xl:pl-80">
         <main>{children}</main>
+        <Footer />
       </div>
-      <Footer />
     </div>
   );
 }

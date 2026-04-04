@@ -1,6 +1,6 @@
 .liquid-glass {
-  backdrop-filter: blur(16px) saturate(180%);
-  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  backdrop-filter: blur(var(--app-blur, 16px)) saturate(180%);
+  -webkit-backdrop-filter: blur(var(--app-blur, 16px)) saturate(180%);
   background:
     linear-gradient(180deg, rgba(18, 27, 44, 0.84) 0%, rgba(8, 12, 21, 0.76) 100%),
     radial-gradient(circle at top left, rgba(255, 106, 61, 0.12), transparent 36%),
@@ -12,8 +12,8 @@
 }
 
 .liquid-glass-soft {
-  backdrop-filter: blur(12px) saturate(160%);
-  -webkit-backdrop-filter: blur(12px) saturate(160%);
+  backdrop-filter: blur(calc(var(--app-blur, 16px) * 0.75)) saturate(160%);
+  -webkit-backdrop-filter: blur(calc(var(--app-blur, 16px) * 0.75)) saturate(160%);
   background:
     linear-gradient(180deg, rgba(18, 27, 44, 0.76) 0%, rgba(8, 12, 21, 0.66) 100%),
     radial-gradient(circle at top right, rgba(101, 137, 255, 0.08), transparent 42%);

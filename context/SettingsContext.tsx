@@ -8,95 +8,38 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { useQueryClient } from "@tanstack/react-query";
 
 import { dataLayer } from "@/lib/dataLayer";
-import { DEFAULT_SETTINGS, readPreferredMode, writePreferredMode } from "@/lib/settings";
-import { useSession } from "@/context/SessionContext";
-import type { AppDataMode, Settings, SettingsScope } from "@/types/settings";
+import { DEFAULT_SETTINGS } from "@/lib/settings";
+import type { Settings } from "@/types/settings";
 
 type SettingsContextValue = {
   ready: boolean;
-  error: string | null;
-  mode: AppDataMode;
-  scope: SettingsScope;
   settings: Settings;
   updateSettings(next: Partial<Settings>): Promise<void>;
-  setGuestMode(enabled: boolean): Promise<void>;
+  resetSettings(): Promise<void>;
 };
 
 const SettingsContext = createContext<SettingsContextValue | null>(null);
 
-const buildScope = (mode: AppDataMode, uid: string | null): SettingsScope =>
-  mode === "account" && uid ? { mode: "account", uid } : { mode: "guest" };
-
-const wait = (ms: number) =>
-  new Promise<void>((resolve) => {
-    window.setTimeout(resolve, ms);
-  });
-
-const loadSettingsWithRetry = async (scope: SettingsScope) => {
-  try {
-    return await dataLayer.loadSettings(scope);
-  } catch (error) {
-    if (scope.mode !== "account") {
-      throw error;
-    }
-
-    await wait(450);
-    return dataLayer.loadSettings(scope);
-  }
-};
-
 export function SettingsProvider({ children }: { children: ReactNode }) {
-  const queryClient = useQueryClient();
-  const { initialized, session } = useSession();
   const [ready, setReady] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [mode, setMode] = useState<AppDataMode>("guest");
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
 
   useEffect(() => {
-    if (!initialized) {
-      return;
-    }
-
     let cancelled = false;
+
     const bootstrap = async () => {
-      setReady(false);
-
-      const canUseAccount = session.status === "authenticated" && !!session.firebaseUid;
-      const preferredMode = canUseAccount ? readPreferredMode() : "guest";
-      const nextMode: AppDataMode = canUseAccount ? (preferredMode === "guest" ? "guest" : "account") : "guest";
-      const nextScope = buildScope(nextMode, session.firebaseUid);
       try {
-        const loadedSettings = await loadSettingsWithRetry(nextScope);
-        const resolvedSettings =
-          nextMode === "guest"
-            ? { ...loadedSettings, guestMode: true }
-            : { ...loadedSettings, guestMode: false };
-
-        if (cancelled) {
-          return;
+        const loadedSettings = await dataLayer.loadSettings();
+        if (!cancelled) {
+          setSettings(loadedSettings);
         }
-
-        setMode(nextMode);
-        setSettings(resolvedSettings);
-        setError(null);
-      } catch (caughtError) {
-        if (cancelled) {
-          return;
+      } finally {
+        if (!cancelled) {
+          setReady(true);
         }
-
-        setMode(nextMode);
-        setSettings(
-          nextMode === "guest"
-            ? { ...DEFAULT_SETTINGS, guestMode: true }
-            : { ...DEFAULT_SETTINGS, guestMode: false },
-        );
-        setError(caughtError instanceof Error ? caughtError.message : "Settings could not be loaded.");
       }
-      setReady(true);
     };
 
     void bootstrap();
@@ -104,68 +47,57 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [initialized, session.firebaseUid, session.status]);
+  }, []);
 
-  const scope = useMemo(() => buildScope(mode, session.firebaseUid), [mode, session.firebaseUid]);
+  useEffect(() => {
+    if (!ready) {
+      return;
+    }
+
+    const root = document.documentElement;
+    root.dataset.theme = settings.amoledMode ? "amoled" : "cinematic-dark";
+    root.dataset.cardDensity = settings.cardDensity;
+    root.dataset.blur = settings.blurStrength;
+    root.dataset.largeText = settings.largeText ? "true" : "false";
+    root.dataset.audioProfile = settings.audioProfile;
+
+    root.style.setProperty(
+      "--app-blur",
+      settings.blurStrength === "soft" ? "10px" : settings.blurStrength === "intense" ? "24px" : "16px",
+    );
+    root.style.setProperty("--card-gap", settings.cardDensity === "compact" ? "1rem" : "1.5rem");
+    root.style.setProperty("--content-gap", settings.cardDensity === "compact" ? "1.5rem" : "2.1rem");
+    root.style.setProperty("--text-scale", settings.largeText ? "1.05" : "1");
+
+    if (settings.accentTone === "electric") {
+      root.style.setProperty("--accent", "#6f7dff");
+      root.style.setProperty("--accent-soft", "rgba(111, 125, 255, 0.2)");
+    } else if (settings.accentTone === "aurora") {
+      root.style.setProperty("--accent", "#61f6d0");
+      root.style.setProperty("--accent-soft", "rgba(97, 246, 208, 0.18)");
+    } else {
+      root.style.setProperty("--accent", "#ff6a3d");
+      root.style.setProperty("--accent-soft", "rgba(255, 106, 61, 0.18)");
+    }
+  }, [ready, settings]);
 
   const value = useMemo<SettingsContextValue>(
     () => ({
       ready,
-      error,
-      mode,
-      scope,
       settings,
       async updateSettings(next) {
-        const merged =
-          mode === "guest"
-            ? { ...settings, ...next, guestMode: true }
-            : { ...settings, ...next, guestMode: false };
-        try {
-          const persisted = await dataLayer.saveSettings(scope, merged);
-          setSettings(
-            mode === "guest"
-              ? { ...persisted, guestMode: true }
-              : { ...persisted, guestMode: false },
-          );
-          setError(null);
-        } catch (caughtError) {
-          setError(caughtError instanceof Error ? caughtError.message : "Settings could not be saved.");
-          throw caughtError;
-        }
+        const persisted = await dataLayer.saveSettings({
+          ...settings,
+          ...next,
+        });
+        setSettings(persisted);
       },
-      async setGuestMode(enabled) {
-        if (!enabled && !(session.status === "authenticated" && session.firebaseUid)) {
-          return;
-        }
-
-        setReady(false);
-        const nextMode: AppDataMode = enabled ? "guest" : "account";
-        writePreferredMode(nextMode);
-        dataLayer.clearModeScopedCache(queryClient, mode);
-        const nextScope = buildScope(nextMode, session.firebaseUid);
-        try {
-          const loadedSettings = await loadSettingsWithRetry(nextScope);
-          setMode(nextMode);
-          setSettings(
-            nextMode === "guest"
-              ? { ...loadedSettings, guestMode: true }
-              : { ...loadedSettings, guestMode: false },
-          );
-          setError(null);
-        } catch (caughtError) {
-          setMode(nextMode);
-          setSettings(
-            nextMode === "guest"
-              ? { ...DEFAULT_SETTINGS, guestMode: true }
-              : { ...DEFAULT_SETTINGS, guestMode: false },
-          );
-          setError(caughtError instanceof Error ? caughtError.message : "Mode settings could not be loaded.");
-        } finally {
-          setReady(true);
-        }
+      async resetSettings() {
+        const persisted = await dataLayer.saveSettings(DEFAULT_SETTINGS);
+        setSettings(persisted);
       },
     }),
-    [error, mode, queryClient, ready, scope, session.firebaseUid, session.status, settings],
+    [ready, settings],
   );
 
   return <SettingsContext.Provider value={value}>{children}</SettingsContext.Provider>;

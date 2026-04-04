@@ -4,11 +4,11 @@ import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, Maximize2, Minimize2, X } from "lucide-react";
 
-import { env } from "@/lib/env";
 import { cn } from "@/lib/cn";
+import { env } from "@/lib/env";
+import { dataLayer } from "@/lib/dataLayer";
 import { getClientMediaDetails, getClientSeasonEpisodes } from "@/lib/tmdb/client";
 import { useSettingsContext } from "@/context/SettingsContext";
-import { dataLayer } from "@/lib/dataLayer";
 import type { MediaType, SeasonSummary } from "@/types/media";
 
 export function PlaybackTheater({
@@ -30,12 +30,12 @@ export function PlaybackTheater({
   backdropPath: string | null;
   seasons?: SeasonSummary[];
 }) {
-  const [isTheaterMode, setIsTheaterMode] = useState(false);
+  const { ready, settings } = useSettingsContext();
+  const [isTheaterMode, setIsTheaterMode] = useState(settings.theaterModeDefault);
   const [selectedSeason, setSelectedSeason] = useState(1);
   const [selectedEpisode, setSelectedEpisode] = useState(1);
   const lastProgressRef = useRef(0);
-
-  const { ready, scope, settings } = useSettingsContext();
+  const progressLoadedRef = useRef(false);
 
   const detailsQuery = useQuery({
     queryKey: ["player", mediaType, mediaId, "details"],
@@ -53,45 +53,61 @@ export function PlaybackTheater({
   });
 
   const progressQuery = useQuery({
-    queryKey: ["player", mediaId, "progress", scope],
-    queryFn: () => dataLayer.getPlaybackProgress(scope, mediaId),
-    enabled: open && ready,
+    queryKey: ["player", mediaId, "progress"],
+    queryFn: () => dataLayer.getPlaybackProgress(mediaId),
+    enabled: open && ready && settings.resumePlayback,
+    staleTime: 1000 * 30,
   });
-
-  const hasLoadedProgressRef = useRef(false);
-
-  useEffect(() => {
-    if (open && mediaType === "tv" && progressQuery.data && !hasLoadedProgressRef.current) {
-      if (progressQuery.data.season && progressQuery.data.episode) {
-        setSelectedSeason(progressQuery.data.season);
-        setSelectedEpisode(progressQuery.data.episode);
-      }
-      hasLoadedProgressRef.current = true;
-    }
-  }, [open, mediaType, progressQuery.data]);
 
   useEffect(() => {
     if (!open) {
-      hasLoadedProgressRef.current = false;
-      // Reset episodes/seasons selection logic here if needed, or allow it to be preserved
+      setIsTheaterMode(settings.theaterModeDefault);
+      setSelectedSeason(1);
+      setSelectedEpisode(1);
+      progressLoadedRef.current = false;
+      return;
+    }
+
+    setIsTheaterMode(settings.theaterModeDefault);
+  }, [open, settings.theaterModeDefault]);
+
+  useEffect(() => {
+    if (!open || mediaType !== "tv" || !settings.rememberLastEpisode || !progressQuery.data || progressLoadedRef.current) {
+      return;
+    }
+
+    if (progressQuery.data.season) {
+      setSelectedSeason(progressQuery.data.season);
+    }
+    if (progressQuery.data.episode) {
+      setSelectedEpisode(progressQuery.data.episode);
+    }
+    progressLoadedRef.current = true;
+  }, [mediaType, open, progressQuery.data, settings.rememberLastEpisode]);
+
+  useEffect(() => {
+    if (!open) {
       return;
     }
 
     const onEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        if (isTheaterMode) {
-          setIsTheaterMode(false);
-          return;
-        }
-        onClose();
+      if (event.key !== "Escape") {
+        return;
       }
+
+      if (isTheaterMode) {
+        setIsTheaterMode(false);
+        return;
+      }
+
+      onClose();
     };
 
     const onMessage = (event: MessageEvent) => {
       const payload = event.data as
         | { type?: string; data?: { event?: string; currentTime?: number; duration?: number } }
         | undefined;
-      if (!ready || !payload || payload.type !== "PLAYER_EVENT") {
+      if (!ready || !settings.resumePlayback || !payload || payload.type !== "PLAYER_EVENT") {
         return;
       }
 
@@ -107,7 +123,7 @@ export function PlaybackTheater({
       }
 
       lastProgressRef.current = now;
-      void dataLayer.savePlaybackProgress(scope, {
+      void dataLayer.savePlaybackProgress({
         mediaId,
         mediaType,
         title,
@@ -138,9 +154,9 @@ export function PlaybackTheater({
     onClose,
     posterPath,
     ready,
-    scope,
     selectedEpisode,
     selectedSeason,
+    settings.resumePlayback,
     title,
   ]);
 
@@ -151,38 +167,37 @@ export function PlaybackTheater({
   let sourceUrl =
     mediaType === "movie"
       ? `${env.vidkingBase}/movie/${mediaId}?color=ff5a2a&autoPlay=true`
-      : `${env.vidkingBase}/tv/${mediaId}/${selectedSeason}/${selectedEpisode}?color=ff5a2a&autoPlay=true&nextEpisode=true&episodeSelector=true`;
+      : `${env.vidkingBase}/tv/${mediaId}/${selectedSeason}/${selectedEpisode}?color=ff5a2a&autoPlay=true&episodeSelector=true${settings.autoplayNextEpisode ? "&nextEpisode=true" : ""}`;
 
-  if (progressQuery.data && progressQuery.data.currentTime > 0) {
-    if (
-      mediaType === "movie" ||
-      (mediaType === "tv" &&
-        progressQuery.data.season === selectedSeason &&
-        progressQuery.data.episode === selectedEpisode)
-    ) {
-      sourceUrl += `&progress=${Math.floor(progressQuery.data.currentTime)}`;
-    }
+  if (
+    settings.resumePlayback &&
+    progressQuery.data &&
+    progressQuery.data.currentTime > 0 &&
+    (mediaType === "movie" ||
+      (progressQuery.data.season === selectedSeason && progressQuery.data.episode === selectedEpisode))
+  ) {
+    sourceUrl += `&progress=${Math.floor(progressQuery.data.currentTime)}`;
   }
 
   return (
-    <div className="fixed inset-0 z-40 flex items-start justify-center bg-black/88 px-4 pb-4 pt-24 backdrop-blur-md md:pt-28">
+    <div className="fixed inset-0 z-[85] flex items-start justify-center bg-black/88 px-3 pb-3 pt-20 backdrop-blur-md md:px-4 md:pt-8">
       {!isTheaterMode ? (
         <button type="button" aria-label="Close player overlay" className="absolute inset-0" onClick={onClose} />
       ) : null}
 
       <div
         className={cn(
-          "relative z-[41] flex overflow-hidden bg-black transition-all duration-300",
+          "relative z-[86] flex overflow-hidden bg-black transition-all duration-300",
           isTheaterMode
-            ? "liquid-glass h-[calc(100vh-7rem)] w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)] flex-col rounded-[2rem] p-4 md:h-[calc(100vh-8rem)]"
-            : "liquid-glass h-[min(calc(100vh-7rem),880px)] w-full max-w-6xl flex-col rounded-[2rem] p-4"
+            ? "liquid-glass h-[calc(100vh-6.4rem)] w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)] flex-col rounded-[2rem] p-3 md:h-[calc(100vh-4rem)]"
+            : "liquid-glass h-[min(calc(100vh-7rem),880px)] w-full max-w-6xl flex-col rounded-[2rem] p-3",
         )}
       >
         <div className="relative flex h-full w-full flex-col overflow-hidden rounded-[1.4rem] border border-white/10 bg-black">
           <div className="relative z-10 flex flex-wrap items-center justify-between gap-4 border-b border-white/10 bg-[#0d1117]/90 px-5 py-4">
             <div>
               <p className="text-xs uppercase tracking-[0.28em] text-[var(--muted)]">
-                {mediaType === "tv" ? `Season ${selectedSeason} Episode ${selectedEpisode}` : "Movie Playback"}
+                {mediaType === "tv" ? `Season ${selectedSeason} Episode ${selectedEpisode}` : "Movie playback"}
               </p>
               <h3 className="text-2xl font-semibold text-white">{title}</h3>
             </div>
@@ -243,13 +258,20 @@ export function PlaybackTheater({
               sandbox={
                 settings.blockPopups
                   ? "allow-scripts allow-same-origin allow-forms allow-presentation"
-                  : undefined
+                  : "allow-scripts allow-same-origin allow-forms allow-presentation allow-popups allow-popups-to-escape-sandbox"
               }
+              allowFullScreen
             />
           </div>
 
+          {settings.showPlaybackTips ? (
+            <div className="absolute bottom-4 left-4 z-10 rounded-2xl border border-white/10 bg-black/60 px-4 py-3 text-xs text-[var(--muted)]">
+              Press Esc to close. Playback progress saves locally every few seconds.
+            </div>
+          ) : null}
+
           {detailsQuery.isError ? (
-            <div className="absolute bottom-4 left-4 right-4 z-10 rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-100">
+            <div className="absolute bottom-4 right-4 z-10 rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-100">
               <span className="inline-flex items-center gap-2">
                 <AlertTriangle className="size-4" />
                 TV metadata could not be loaded. Playback is still available.

@@ -14,6 +14,10 @@
   --accent-soft: rgba(255, 106, 61, 0.18);
   --accent-alt: rgba(101, 137, 255, 0.14);
   --success: #6cf2c8;
+  --app-blur: 16px;
+  --card-gap: 1.5rem;
+  --content-gap: 2rem;
+  --text-scale: 1;
 }
 
 html[data-theme="cinematic-dark"] {
@@ -22,6 +26,15 @@ html[data-theme="cinematic-dark"] {
     radial-gradient(circle at top right, rgba(101, 137, 255, 0.13), transparent 34%),
     linear-gradient(180deg, #09101b 0%, #060912 42%, #05070d 100%);
   background-color: #060912;
+  min-height: 100vh;
+}
+
+html[data-theme="amoled"] {
+  background:
+    radial-gradient(circle at top left, rgba(255, 106, 61, 0.08), transparent 24%),
+    radial-gradient(circle at top right, rgba(101, 137, 255, 0.1), transparent 26%),
+    linear-gradient(180deg, #030406 0%, #020304 56%, #010102 100%);
+  background-color: #020304;
   min-height: 100vh;
 }
 
@@ -35,6 +48,7 @@ body {
 body {
   margin: 0;
   font-family: var(--font-space-grotesk), sans-serif;
+  font-size: calc(16px * var(--text-scale, 1));
   text-rendering: optimizeLegibility;
   overflow-x: hidden;
   position: relative;
@@ -74,6 +88,11 @@ textarea {
   font: inherit;
 }
 
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
 ::selection {
   background: rgba(255, 90, 42, 0.28);
   color: #fff2eb;
@@ -108,4 +127,20 @@ textarea {
 
 .scrollbar-hidden::-webkit-scrollbar {
   display: none;
+}
+
+:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 82%, white 18%);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
 }

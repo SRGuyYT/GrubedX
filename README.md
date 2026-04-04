@@ -1,176 +1,72 @@
-# 🎬 GrubX
+# GrubX
 
-A modern full-stack web app for discovering and exploring movies and TV shows. Built with a focus on performance, clean UI, and a personalized user experience.
+GrubX is a local-first streaming shell built with Next.js App Router. It focuses on speed, responsive browsing, offline support, and a polished viewing experience across movies, TV, and live sports streams.
 
----
+## Highlights
 
-## 🚧 Status
+- Local-only watchlist, continue watching, settings, and updater state
+- Responsive shell:
+  - desktop sidebar
+  - compact tablet rail
+  - mobile top bar + bottom navigation
+- Debounced Search All with cached movie and TV results
+- Offline-first app shell with a service worker
+- Built-in updater that compares your current version with the GrubX GitHub repo
+- Popup-sandboxed live sports and controlled external fetches only
 
-This project is currently in **Early Access (Pre-Release)**.
-Core features are functional, but the app is still under active development.
+## Stack
 
-* ✅ Desktop: Fully supported
-* ⚠️ Tablet: Partially supported
-* ⚠️ Mobile: Minimally usable
+- Next.js App Router
+- React 19
+- TypeScript
+- React Query
+- Tailwind CSS 4
 
----
+## Environment
 
-## ✨ Features
-
-* 🔍 Search movies and TV shows
-* 🎞 Browse trending and categorized media
-* ▶️ Watch trailers and playback content
-* 📺 Continue Watching tracking
-* ⭐ Watchlist system
-* 👤 Authentication & session management
-* ⚙️ User settings & preferences
-* ⚡ Real-time updates via subscriptions
-
----
-
-## 🛠 Tech Stack
-
-* **Frontend:** Next.js (App Router), React, TypeScript
-* **Backend:** Next.js API Routes
-* **Database:** Firebase Firestore
-* **Auth:** Firebase + Matrix bridge
-* **Media Data:** TMDB API
-* **Styling:** CSS + custom UI components
-
----
-
-## 📁 Project Structure
+Create `.env` from `.env.example`:
 
 ```bash
-.
-├── app/                    # App Router (pages, layouts, API routes)
-│   ├── api/                # Server-side API routes
-│   │   └── auth/matrix/    # Matrix auth bridge endpoint
-│   └── (routes)/           # Application pages
-│
-├── components/             # Reusable UI components
-│   ├── media/              # Media-related UI (cards, player, rows)
-│   ├── shell/              # Layout (Navbar, Footer, AppShell)
-│   ├── user/               # User-specific UI (watchlist, continue watching)
-│   └── settings/           # Settings UI
-│
-├── context/                # React context providers
-│   ├── SessionContext.tsx
-│   └── SettingsContext.tsx
-│
-├── hooks/                  # Custom React hooks
-│   ├── useInfiniteMedia.ts
-│   ├── useWatchlistSubscription.ts
-│   └── ...
-│
-├── lib/                    # Core logic & services
-│   ├── auth/               # Authentication logic (Matrix bridge)
-│   ├── firebase/           # Firebase admin & client setup
-│   ├── tmdb/               # TMDB API client (server + client)
-│   ├── dataLayer.ts        # Data abstraction layer
-│   └── env.ts              # Environment config
-│
-├── public/                 # Static assets (icons, manifest, OG image)
-├── styles/                 # Global and custom styles
-├── types/                  # TypeScript type definitions
-│
-├── firestore.rules         # Firestore security rules
-├── firebase.json           # Firebase config
-├── next.config.ts          # Next.js config
-└── package.json
+NEXT_PUBLIC_TMDB_PROXY_BASE=https://mtd.sky0cloud.dpdns.org
+NEXT_PUBLIC_TMDB_API_KEY=your_tmdb_key
+NEXT_PUBLIC_VIDKING_BASE=https://www.vidking.net/embed
 ```
 
----
-
-## 🔌 API & Server
-
-This app uses **Next.js server routes** for backend functionality.
-
-### Auth API
-
-* `app/api/auth/matrix/bridge/route.ts`
-
-  * Handles authentication via the Matrix bridge
-  * Connects external auth flow to Firebase sessions
-
-### Server Utilities
-
-* `lib/firebase/admin.ts` → Firebase Admin SDK (server-side)
-* `lib/tmdb/server.ts` → Server-side TMDB requests
-* `lib/auth/matrixBridge.ts` → Matrix authentication logic
-
----
-
-## ▶️ Getting Started
-
-### Install dependencies
+## Scripts
 
 ```bash
 pnpm install
-```
-
-### Run development server
-
-```bash
-pnpm dev
-```
-
-### Build for production
-
-```bash
+pnpm typecheck
 pnpm build
+pnpm dev
 pnpm start
 ```
 
----
-
-## 📜 Scripts
+Or use:
 
 ```bash
-pnpm dev        # Start dev server
-pnpm build      # Build app
-pnpm start      # Run production server
+./manage.sh
 ```
 
----
+## Architecture
 
-## 🧪 Notes
+- `app/` contains the App Router routes and controlled API routes
+- `components/` contains shell, media, feedback, settings, and system UI
+- `context/SettingsContext.tsx` owns the local settings state
+- `lib/dataLayer.ts` is the single local persistence boundary
+- `public/sw.js` provides offline-first shell caching
+- `app/api/update/route.ts` checks the fixed GitHub repo for newer tags
 
-* Mobile UI is still under heavy development
-* Some features may be incomplete or unstable
-* Data persistence edge cases may exist
+## Security Notes
 
----
+- Authentication and Matrix/Firebase bridging are removed temporarily
+- The former bridge route is deleted, removing the SSRF surface entirely
+- External requests are limited to fixed TMDB, Streamed, VidKing, and GitHub update endpoints
+- GitHub Actions workflow permissions are restricted to `contents: read`
 
-## 📢 Feedback
+## Build Verification
 
-Found a bug or have a suggestion?
-Open an issue or contribute to the project.
-
----
-
-## 📈 Changelog
-
-Full commit history:
-https://github.com/SRGuyYT/grubX/commits/
-
----
-
-## 📄 License
-
-MIT License
-
----
-
-## ⚖️ Legal
-
-See full legal and policy details here:
-https://github.com/SRGuyYT/GrubX/blob/main/LEGAL.md
-
----
-
-## 🙌 Credits
-
-* TMDB for media data
-* Firebase for backend services
-* Built with Next.js
+```bash
+pnpm typecheck
+pnpm build
+```

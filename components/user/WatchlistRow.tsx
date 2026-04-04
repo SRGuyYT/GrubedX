@@ -9,7 +9,7 @@ import type { MediaItem } from "@/types/media";
 export function WatchlistRow({
   showEmpty = false,
   title = "Watchlist",
-  description = "Realtime from your active storage mode.",
+  description = "Your saved queue is local, instant, and available even when you are offline.",
   emptyTitle = "Your watchlist is empty",
   emptyDescription = "Save a movie or show and it will appear here.",
 }: {
@@ -19,7 +19,7 @@ export function WatchlistRow({
   emptyTitle?: string;
   emptyDescription?: string;
 }) {
-  const { ready } = useSettingsContext();
+  const { ready, settings } = useSettingsContext();
   const query = useWatchlistSubscription();
   const items = (query.data ?? []).map(
     (item) =>
@@ -28,7 +28,7 @@ export function WatchlistRow({
         tmdbId: Number(item.mediaId),
         title: item.title,
         mediaType: item.mediaType,
-        overview: "Saved to your active mode watchlist.",
+        overview: "Saved for later playback.",
         posterPath: item.posterPath,
         backdropPath: item.backdropPath,
         releaseDate: item.addedAt,
@@ -37,7 +37,7 @@ export function WatchlistRow({
       }) satisfies MediaItem,
   );
 
-  if (!ready || query.isBootstrapping) {
+  if (!ready || query.isBootstrapping || !settings.showWatchlist) {
     return null;
   }
 

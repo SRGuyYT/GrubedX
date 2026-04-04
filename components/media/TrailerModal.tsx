@@ -3,8 +3,8 @@
 import { useEffect } from "react";
 import { ExternalLink, X } from "lucide-react";
 
-import { LoadingState } from "@/components/feedback/LoadingState";
 import { EmptyState } from "@/components/feedback/EmptyState";
+import { LoadingState } from "@/components/feedback/LoadingState";
 import { useSettingsContext } from "@/context/SettingsContext";
 import { useTrailer } from "@/hooks/useTrailer";
 import type { MediaType } from "@/types/media";
@@ -38,6 +38,7 @@ export function TrailerModal({
 
     document.body.style.overflow = "hidden";
     window.addEventListener("keydown", onEscape);
+
     return () => {
       document.body.style.overflow = "auto";
       window.removeEventListener("keydown", onEscape);
@@ -50,13 +51,15 @@ export function TrailerModal({
 
   const trailer = trailerQuery.data;
   const autoplay = settings.autoplayTrailers ? "1" : "0";
-  const embedUrl = trailer ? `${trailer.embedUrl}?autoplay=${autoplay}&rel=0` : null;
+  const muted = settings.inlineTrailerMuted ? "1" : "0";
+  const embedUrl = trailer ? `${trailer.embedUrl}?autoplay=${autoplay}&mute=${muted}&rel=0&modestbranding=1` : null;
 
   return (
-    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/80 px-4 py-6 backdrop-blur-md">
+    <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/82 px-3 py-6 backdrop-blur-md md:px-4">
       <button type="button" aria-label="Close trailer modal" className="absolute inset-0" onClick={onClose} />
-      <div className="liquid-glass relative z-[81] w-full max-w-5xl rounded-[2rem] p-5">
-        <div className="mb-4 flex items-center justify-between gap-4">
+
+      <div className="liquid-glass relative z-[91] w-full max-w-5xl rounded-[2rem] p-4 md:p-5">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
           <div>
             <p className="text-xs uppercase tracking-[0.3em] text-[var(--muted)]">Trailer</p>
             <h2 className="text-2xl font-semibold">{title}</h2>
@@ -87,7 +90,7 @@ export function TrailerModal({
         </div>
 
         {trailerQuery.isPending ? (
-          <LoadingState title="Loading trailer" description="Fetching the first YouTube trailer for this title." />
+          <LoadingState title="Loading trailer" description="Pulling the first playable YouTube trailer for this title." />
         ) : trailerQuery.isError ? (
           <EmptyState title="Trailer unavailable" description="TMDB did not return a playable YouTube trailer." />
         ) : trailer && embedUrl ? (
@@ -98,6 +101,7 @@ export function TrailerModal({
                 title={`${title} trailer`}
                 className="h-full w-full border-0"
                 allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+                allowFullScreen
               />
             </div>
           </div>

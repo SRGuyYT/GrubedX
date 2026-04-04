@@ -2,7 +2,10 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  poweredByHeader: false,
+  compress: true,
   images: {
+    formats: ["image/avif", "image/webp"],
     remotePatterns: [
       {
         protocol: "https",
@@ -14,10 +17,6 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  allowedDevOrigins: [
-    'responsive-vidking.cluster-0.preview.emergentcf.cloud',
-    'responsive-vidking.cluster-8.preview.emergentcf.cloud'
-  ]
 };
 
 export default nextConfig;

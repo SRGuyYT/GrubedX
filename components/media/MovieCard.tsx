@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Star } from "lucide-react";
 
 import { useSettingsContext } from "@/context/SettingsContext";
+import { cn } from "@/lib/cn";
 import type { MediaItem, SeasonSummary } from "@/types/media";
 
 export function MovieCard({
@@ -15,14 +16,20 @@ export function MovieCard({
   seasons?: SeasonSummary[];
 }) {
   const { settings } = useSettingsContext();
-  const imageWidth = settings.dataSaver ? "w342" : "w500";
+  const imageWidth =
+    settings.posterQuality === "high" ? "w500" : settings.posterQuality === "data-saver" || settings.dataSaver ? "w342" : "w500";
+  const compact = settings.cardDensity === "compact";
 
   return (
-    <article className="group relative flex h-full w-full flex-col transition-transform duration-300 hover:-translate-y-1 hover:scale-[1.01]">
+    <article className="group relative flex h-full w-full flex-col transition-transform duration-300 hover:-translate-y-1 hover:scale-[1.01] active:scale-[0.985]">
       <div className="pointer-events-none absolute inset-0 rounded-[2rem] bg-[radial-gradient(circle_at_top,rgba(255,106,61,0.16),transparent_52%),radial-gradient(circle_at_bottom_right,rgba(101,137,255,0.12),transparent_46%)] opacity-0 transition duration-300 group-hover:opacity-100" />
       <Link
         href={`/title/${media.mediaType}/${media.id}`}
-        className="liquid-glass-soft relative flex h-full flex-col overflow-hidden rounded-[2rem] border border-white/8 p-4"
+        prefetch={settings.prefetchRoutes && !settings.lowBandwidthMode}
+        className={cn(
+          "liquid-glass-soft relative flex h-full flex-col overflow-hidden rounded-[2rem] border border-white/8",
+          compact ? "p-3" : "p-4",
+        )}
       >
         <div className="relative block aspect-[2/3] w-full overflow-hidden rounded-[1.45rem] border border-white/8">
           <Image
@@ -50,15 +57,15 @@ export function MovieCard({
           </div>
         </div>
 
-        <div className="flex flex-1 flex-col gap-4 px-1 pb-1 pt-5">
+        <div className={cn("flex flex-1 flex-col px-1 pb-1", compact ? "gap-3 pt-4" : "gap-4 pt-5")}>
           <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--muted)]">
-            {media.rating ? (
+            {settings.showRatings && media.rating ? (
               <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-black/20 px-3 py-1.5">
                 <Star className="size-3 fill-[var(--accent)] text-[var(--accent)]" />
                 {media.rating.toFixed(1)}
               </span>
             ) : null}
-            {media.releaseDate ? (
+            {settings.showReleaseYear && media.releaseDate ? (
               <span className="rounded-full border border-white/10 bg-black/20 px-3 py-1.5">
                 {new Date(media.releaseDate).getFullYear()}
               </span>
@@ -74,7 +81,7 @@ export function MovieCard({
 
           <div className="mt-auto flex items-center justify-between gap-3 rounded-[1.1rem] border border-white/8 bg-black/20 px-4 py-3 text-sm">
             <span className="font-medium text-white/90">Open title</span>
-            <span className="text-[var(--muted)] transition group-hover:text-white">View details</span>
+            <span className="text-[var(--muted)] transition group-hover:text-white">Play or save</span>
           </div>
         </div>
       </Link>

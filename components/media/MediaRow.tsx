@@ -25,7 +25,7 @@ export function MediaRow({
           {description ? <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--muted)]">{description}</p> : null}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="hidden items-center gap-2 md:flex">
           <button
             type="button"
             onClick={() => rowRef.current?.scrollBy({ left: -720, behavior: "smooth" })}
@@ -45,7 +45,7 @@ export function MediaRow({
         </div>
       </div>
 
-      <div ref={rowRef} className="scrollbar-hidden flex gap-6 overflow-x-auto pb-4 pt-1">
+      <div ref={rowRef} className="scrollbar-hidden flex gap-[var(--card-gap)] overflow-x-auto pb-4 pt-1">
         {items.map((item) => (
           <div key={`${item.mediaType}-${item.id}`} className="w-[190px] shrink-0 sm:w-[220px] md:w-[238px] xl:w-[250px]">
             <MovieCard media={item} />

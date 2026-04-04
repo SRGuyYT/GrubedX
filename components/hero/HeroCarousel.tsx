@@ -1,14 +1,19 @@
 "use client";
 
 import { useEffect, useEffectEvent, useState } from "react";
+import dynamic from "next/dynamic";
 import Image from "next/image";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight, Play, Ticket } from "lucide-react";
 
-import { TrailerModal } from "@/components/media/TrailerModal";
 import { useSettingsContext } from "@/context/SettingsContext";
 import { cn } from "@/lib/cn";
 import type { MediaItem } from "@/types/media";
+
+const TrailerModal = dynamic(
+  () => import("@/components/media/TrailerModal").then((module) => module.TrailerModal),
+  { ssr: false },
+);
 
 export function HeroCarousel({ items }: { items: MediaItem[] }) {
   const [activeIndex, setActiveIndex] = useState(0);
@@ -57,15 +62,18 @@ export function HeroCarousel({ items }: { items: MediaItem[] }) {
                 fill
                 priority={index === 0}
                 sizes="100vw"
-                className="scale-[1.04] object-cover object-center blur-[2px] brightness-[0.42]"
+                className={cn(
+                  "scale-[1.04] object-cover object-center transition duration-700",
+                  settings.reduceBackdropUsage ? "opacity-35 blur-[1px] brightness-[0.32]" : "blur-[1.5px] brightness-[0.48]",
+                )}
               />
             </div>
           ))}
         </div>
-        <div className="absolute inset-0 bg-gradient-to-r from-[#060912] via-[#060912f0] to-[#06091255]" />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#060912] via-[#06091288] to-[#06091299]" />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#05070f] via-[#05070fe6] to-[#05070f66]" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#05070f] via-[#05070f88] to-[#05070fbf]" />
 
-        <div className="page-shell relative flex min-h-[62vh] items-center py-20 md:min-h-[70vh] md:py-24">
+        <div className="page-shell relative flex min-h-[62vh] items-center py-8 md:min-h-[70vh] md:py-12">
           <div className="liquid-glass relative z-10 max-w-3xl rounded-[2.2rem] px-7 py-8 md:px-9 md:py-10">
             <p className="mb-4 text-xs uppercase tracking-[0.45em] text-[var(--muted)]">Trending Today</p>
             <h1 className="max-w-2xl text-4xl font-semibold leading-none sm:text-5xl md:text-6xl">
@@ -77,6 +85,7 @@ export function HeroCarousel({ items }: { items: MediaItem[] }) {
             <div className="mt-9 flex flex-wrap items-center gap-3">
               <Link
                 href={`/title/${activeItem.mediaType}/${activeItem.id}`}
+                prefetch={settings.prefetchRoutes && !settings.lowBandwidthMode}
                 className="rounded-full bg-[var(--accent)] px-6 py-3.5 text-sm font-semibold text-black transition hover:brightness-110"
               >
                 <span className="inline-flex items-center gap-2">
@@ -94,10 +103,16 @@ export function HeroCarousel({ items }: { items: MediaItem[] }) {
                   Watch trailer
                 </span>
               </button>
+              <Link
+                href="/search?focus=1"
+                className="rounded-full border border-white/10 px-6 py-3.5 text-sm font-semibold text-white/90 transition hover:border-white/20 hover:text-white"
+              >
+                Search all
+              </Link>
             </div>
           </div>
 
-          <div className="absolute bottom-10 right-5 z-10 flex items-center gap-3">
+          <div className="absolute bottom-8 right-5 z-10 hidden items-center gap-3 md:flex">
             <button
               type="button"
               onClick={() => setActiveIndex((current) => (current === 0 ? items.length - 1 : current - 1))}

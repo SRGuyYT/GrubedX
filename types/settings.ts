@@ -1,13 +1,42 @@
-export type AppDataMode = "guest" | "account";
+export type ThemeMode = "cinematic-dark" | "amoled";
+export type BlurStrength = "soft" | "balanced" | "intense";
+export type CardDensity = "comfortable" | "compact";
+export type PosterQuality = "balanced" | "high" | "data-saver";
+export type AudioProfile = "cinema" | "dialog" | "night";
+export type AccentTone = "ember" | "electric" | "aurora";
 
 export type Settings = {
-  guestMode: boolean;
-  blockPopups: boolean;
   autoplayTrailers: boolean;
+  theaterModeDefault: boolean;
+  resumePlayback: boolean;
+  rememberLastEpisode: boolean;
+  autoplayNextEpisode: boolean;
+  inlineTrailerMuted: boolean;
+  showPlaybackTips: boolean;
+  blockPopups: boolean;
   enableAnimations: boolean;
+  amoledMode: boolean;
+  accentGlow: boolean;
+  largeText: boolean;
+  showRatings: boolean;
+  showReleaseYear: boolean;
+  cardDensity: CardDensity;
+  blurStrength: BlurStrength;
+  showClock24h: boolean;
+  liveClock: boolean;
   dataSaver: boolean;
+  reduceBackdropUsage: boolean;
+  lowBandwidthMode: boolean;
+  offlineCaching: boolean;
+  prefetchRoutes: boolean;
+  lazyLoadRows: boolean;
+  posterQuality: PosterQuality;
+  liveAutoRefresh: boolean;
+  autoFocusSearch: boolean;
+  rememberSearchFilters: boolean;
+  showContinueWatching: boolean;
+  showWatchlist: boolean;
+  showTrendingOn404: boolean;
+  audioProfile: AudioProfile;
+  accentTone: AccentTone;
 };
-
-export type SettingsScope =
-  | { mode: "guest" }
-  | { mode: "account"; uid: string };

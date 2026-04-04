@@ -1,30 +1,36 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Bookmark, BookmarkCheck, Play, Ticket } from "lucide-react";
 import { toast } from "sonner";
 
-import { PlaybackTheater } from "@/components/media/PlaybackTheater";
-import { TrailerModal } from "@/components/media/TrailerModal";
 import { useSettingsContext } from "@/context/SettingsContext";
 import { useWatchlistSubscription } from "@/hooks/useWatchlistSubscription";
-import { queryKeys } from "@/lib/queryKeys";
 import { dataLayer } from "@/lib/dataLayer";
+import { queryKeys } from "@/lib/queryKeys";
 import type { MediaDetails } from "@/types/media";
+
+const PlaybackTheater = dynamic(
+  () => import("@/components/media/PlaybackTheater").then((module) => module.PlaybackTheater),
+  { ssr: false },
+);
+const TrailerModal = dynamic(
+  () => import("@/components/media/TrailerModal").then((module) => module.TrailerModal),
+  { ssr: false },
+);
 
 export function TitleActions({ media }: { media: MediaDetails }) {
   const [playerOpen, setPlayerOpen] = useState(false);
   const [trailerOpen, setTrailerOpen] = useState(false);
   const queryClient = useQueryClient();
-  const { ready, mode, scope } = useSettingsContext();
-  const watchlistKey = queryKeys.watchlist(mode, scope.mode === "account" ? scope.uid : null);
-  const progressKey = queryKeys.progress(mode, scope.mode === "account" ? scope.uid : null, media.id);
+  const { ready } = useSettingsContext();
   const watchlistQuery = useWatchlistSubscription();
 
   const progressQuery = useQuery({
-    queryKey: progressKey,
-    queryFn: () => dataLayer.getPlaybackProgress(scope, media.id),
+    queryKey: queryKeys.progress(media.id),
+    queryFn: () => dataLayer.getPlaybackProgress(media.id),
     enabled: ready,
     staleTime: 1000 * 30,
   });
@@ -35,7 +41,7 @@ export function TitleActions({ media }: { media: MediaDetails }) {
   );
 
   const toggleWatchlist = async () => {
-    const result = await dataLayer.toggleWatchlist(scope, {
+    const result = await dataLayer.toggleWatchlist({
       mediaId: media.id,
       mediaType: media.mediaType,
       title: media.title,
@@ -44,10 +50,7 @@ export function TitleActions({ media }: { media: MediaDetails }) {
       rating: media.rating,
     });
 
-    if (result.items) {
-      queryClient.setQueryData(watchlistKey, result.items);
-    }
-
+    queryClient.setQueryData(queryKeys.watchlist, result.items ?? []);
     toast.success(result.saved ? "Added to watchlist." : "Removed from watchlist.");
   };
 
@@ -55,32 +58,32 @@ export function TitleActions({ media }: { media: MediaDetails }) {
 
   return (
     <>
-      <div className="relative z-20 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
+      <div className="relative z-20 flex flex-col items-stretch gap-3 sm:flex-row sm:flex-wrap sm:items-center">
         <button
           type="button"
           onClick={() => setPlayerOpen(true)}
-          className="flex items-center justify-center gap-2 rounded-full bg-[var(--accent)] px-6 py-3 text-sm font-semibold text-black transition hover:brightness-110"
+          className="inline-flex items-center justify-center gap-2 rounded-full bg-[var(--accent)] px-6 py-3.5 text-sm font-semibold text-black transition hover:brightness-110 active:scale-[0.98]"
         >
-          <Play className="size-4 fill-current shrink-0" />
-          <span>{hasProgress ? "Resume" : "Play now"}</span>
+          <Play className="size-4 fill-current" />
+          {hasProgress ? "Resume" : "Play now"}
         </button>
 
         <button
           type="button"
           onClick={() => void toggleWatchlist()}
-          className="liquid-glass-soft flex items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-semibold text-white"
+          className="liquid-glass-soft inline-flex items-center justify-center gap-2 rounded-full px-6 py-3.5 text-sm font-semibold text-white transition hover:border-white/15 active:scale-[0.98]"
         >
-          {isSaved ? <BookmarkCheck className="size-4 shrink-0" /> : <Bookmark className="size-4 shrink-0" />}
-          <span>{isSaved ? "Saved" : "Save to watchlist"}</span>
+          {isSaved ? <BookmarkCheck className="size-4 text-[var(--accent)]" /> : <Bookmark className="size-4" />}
+          {isSaved ? "Saved locally" : "Save to watchlist"}
         </button>
 
         <button
           type="button"
           onClick={() => setTrailerOpen(true)}
-          className="flex items-center justify-center gap-2 rounded-full border border-white/10 px-6 py-3 text-sm text-[var(--muted)] transition hover:text-white"
+          className="inline-flex items-center justify-center gap-2 rounded-full border border-white/10 px-6 py-3.5 text-sm font-semibold text-white transition hover:border-white/20 active:scale-[0.98]"
         >
-          <Ticket className="size-4 shrink-0" />
-          <span>Trailer</span>
+          <Ticket className="size-4" />
+          Trailer
         </button>
       </div>
 

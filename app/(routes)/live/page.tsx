@@ -7,6 +7,7 @@ import { CalendarDays, LoaderCircle, Radio, Signal, Tv2, X } from "lucide-react"
 
 import { EmptyState } from "@/components/feedback/EmptyState";
 import { LoadingState } from "@/components/feedback/LoadingState";
+import { useSettingsContext } from "@/context/SettingsContext";
 import { cn } from "@/lib/cn";
 import {
   formatLiveStart,
@@ -24,6 +25,7 @@ const scopeOptions: Array<{ id: LiveMatchScope; label: string; description: stri
 ];
 
 export default function LiveTVPage() {
+  const { settings } = useSettingsContext();
   const [scope, setScope] = useState<LiveMatchScope>("live");
   const [selectedSport, setSelectedSport] = useState("all");
   const [popularOnly, setPopularOnly] = useState(false);
@@ -41,7 +43,7 @@ export default function LiveTVPage() {
     queryKey: ["live", "matches", scope, popularOnly],
     queryFn: ({ signal }) => getClientLiveMatches({ scope, popular: popularOnly }, signal),
     staleTime: 1000 * 30,
-    refetchInterval: 1000 * 60,
+    refetchInterval: settings.liveAutoRefresh ? 1000 * 60 : false,
   });
 
   const filteredMatches = useMemo(() => {

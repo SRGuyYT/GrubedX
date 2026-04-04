@@ -21,7 +21,7 @@ const jetbrainsMono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: "GrubX",
-  description: "Glassy movie and TV browsing with Firebase-backed profiles and guest mode.",
+  description: "Offline-first streaming shell for movies, TV, live matches, and local playback continuity.",
   icons: {
     icon: "/512x512.png",
     apple: "/512x512.png",

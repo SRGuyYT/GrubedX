@@ -1,7 +1,5 @@
-import type { QueryClient } from "@tanstack/react-query";
-
-import type { MediaType } from "@/types/media";
-import type { AppDataMode, Settings, SettingsScope } from "@/types/settings";
+import type { MediaType, SearchTarget } from "@/types/media";
+import type { Settings } from "@/types/settings";
 
 export type WatchlistItem = {
   mediaId: string;
@@ -40,24 +38,40 @@ export type SavePlaybackProgressInput = {
   progress: number;
 };
 
+export type SearchPreferences = {
+  target: SearchTarget;
+  lastQuery: string;
+};
+
+export type UpdaterState = {
+  lastCheckedAt: string | null;
+  latestVersion: string | null;
+  dismissedVersion: string | null;
+  lastError: string | null;
+};
+
 export interface DataLayer {
-  loadSettings(scope: SettingsScope): Promise<Settings>;
-  saveSettings(scope: SettingsScope, settings: Partial<Settings>): Promise<Settings>;
+  loadSettings(): Promise<Settings>;
+  saveSettings(settings: Partial<Settings>): Promise<Settings>;
+  loadWatchlist(): Promise<WatchlistItem[]>;
+  clearWatchlist(): Promise<void>;
+  loadContinueWatching(): Promise<PlaybackProgress[]>;
   subscribeWatchlist(
-    scope: SettingsScope,
     onChange: (items: WatchlistItem[]) => void,
     onError?: (error: Error) => void,
   ): () => void;
   subscribeContinueWatching(
-    scope: SettingsScope,
     onChange: (items: PlaybackProgress[]) => void,
     onError?: (error: Error) => void,
   ): () => void;
-  getPlaybackProgress(scope: SettingsScope, mediaId: string): Promise<PlaybackProgress | null>;
-  savePlaybackProgress(scope: SettingsScope, input: SavePlaybackProgressInput): Promise<void>;
+  getPlaybackProgress(mediaId: string): Promise<PlaybackProgress | null>;
+  savePlaybackProgress(input: SavePlaybackProgressInput): Promise<void>;
+  clearContinueWatching(): Promise<void>;
   toggleWatchlist(
-    scope: SettingsScope,
     item: Omit<WatchlistItem, "addedAt">,
   ): Promise<{ saved: boolean; items?: WatchlistItem[] }>;
-  clearModeScopedCache(queryClient: QueryClient, mode: AppDataMode): void;
+  loadSearchPreferences(): Promise<SearchPreferences>;
+  saveSearchPreferences(next: Partial<SearchPreferences>): Promise<SearchPreferences>;
+  loadUpdaterState(): Promise<UpdaterState>;
+  saveUpdaterState(next: Partial<UpdaterState>): Promise<UpdaterState>;
 }
