@@ -6,13 +6,12 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$ROOT_DIR"
 
 HOST="${HOST:-0.0.0.0}"
-DEV_PORT="${DEV_PORT:-9000}"
-PREVIEW_PORT="${PREVIEW_PORT:-9000}"
 STABLE_PORT="${STABLE_PORT:-9000}"
-DEV_DOMAIN="${DEV_DOMAIN:-grub.sky0cloud.dpdns.org}"
-PREVIEW_DOMAIN="${PREVIEW_DOMAIN:-grub.sky0cloud.dpdns.org}"
 STABLE_DOMAIN="${STABLE_DOMAIN:-grub.sky0cloud.dpdns.org}"
 ACTION="${1:-menu}"
+TMP_DIR="${TMP_DIR:-$ROOT_DIR/.tmp}"
+STABLE_PID_FILE="${STABLE_PID_FILE:-$TMP_DIR/stable-server.pid}"
+STABLE_LOG_FILE="${STABLE_LOG_FILE:-$TMP_DIR/stable-server.log}"
 
 log() {
   printf '[grubx] %s\n' "$*"
@@ -25,6 +24,10 @@ fail() {
 
 require_command() {
   command -v "$1" >/dev/null 2>&1 || fail "required command '$1' was not found in PATH"
+}
+
+ensure_tmp_dir() {
+  mkdir -p "$TMP_DIR"
 }
 
 ensure_pnpm() {
@@ -109,41 +112,104 @@ refresh_build_output() {
   run_pnpm build
 }
 
-start_dev() {
-  ensure_pnpm
-  ensure_env_file
-
-  if [[ ! -d node_modules ]]; then
-    log "'node_modules' missing. Installing dependencies first..."
-    install_dependencies
+is_pid_running() {
+  local pid="$1"
+  if [[ -z "$pid" ]]; then
+    return 1
   fi
 
-  log "Starting Next.js dev server on ${HOST}:${DEV_PORT} (${DEV_DOMAIN})..."
-  exec "${PNPM_CMD[@]}" exec next dev -H "${HOST}" -p "${DEV_PORT}"
+  kill -0 "$pid" >/dev/null 2>&1
 }
 
-start_server() {
+read_stable_pid() {
+  if [[ -f "$STABLE_PID_FILE" ]]; then
+    tr -d '[:space:]' < "$STABLE_PID_FILE"
+  fi
+}
+
+stop_stable_server() {
+  local pid
+
+  pid="$(read_stable_pid)"
+  if [[ -z "$pid" ]]; then
+    log "No stable server PID file found."
+    return 0
+  fi
+
+  if ! is_pid_running "$pid"; then
+    log "Stable server PID $pid is not running. Cleaning stale PID file."
+    rm -f "$STABLE_PID_FILE"
+    return 0
+  fi
+
+  log "Stopping stable server PID $pid..."
+  kill "$pid"
+
+  for _ in 1 2 3 4 5 6 7 8 9 10; do
+    if ! is_pid_running "$pid"; then
+      rm -f "$STABLE_PID_FILE"
+      log "Stable server stopped."
+      return 0
+    fi
+    sleep 1
+  done
+
+  log "Stable server did not exit cleanly. Sending SIGKILL to PID $pid..."
+  kill -9 "$pid" >/dev/null 2>&1 || true
+  rm -f "$STABLE_PID_FILE"
+}
+
+start_stable_server() {
   local mode="$1"
-  local port="$2"
-  local domain="$3"
 
   ensure_pnpm
   ensure_env_file
   refresh_build_output
 
-  log "Starting Next.js ${mode} server on ${HOST}:${port} (${domain})..."
-  exec "${PNPM_CMD[@]}" exec next start -H "${HOST}" -p "${port}"
+  if [[ "$mode" == "foreground" ]]; then
+    log "Starting stable server in foreground on ${HOST}:${STABLE_PORT} (${STABLE_DOMAIN})..."
+    exec "${PNPM_CMD[@]}" exec next start -H "${HOST}" -p "${STABLE_PORT}"
+  fi
+
+  ensure_tmp_dir
+
+  local existing_pid
+  existing_pid="$(read_stable_pid)"
+  if [[ -n "$existing_pid" ]] && is_pid_running "$existing_pid"; then
+    fail "stable server is already running with PID $existing_pid"
+  fi
+
+  rm -f "$STABLE_PID_FILE"
+  : > "$STABLE_LOG_FILE"
+
+  log "Starting stable server in background on ${HOST}:${STABLE_PORT} (${STABLE_DOMAIN})..."
+  (
+    nohup "${PNPM_CMD[@]}" exec next start -H "${HOST}" -p "${STABLE_PORT}" >>"$STABLE_LOG_FILE" 2>&1 &
+    echo $! > "$STABLE_PID_FILE"
+  )
+
+  local pid
+  pid="$(read_stable_pid)"
+  sleep 2
+
+  if [[ -z "$pid" ]] || ! is_pid_running "$pid"; then
+    rm -f "$STABLE_PID_FILE"
+    fail "stable server failed to start. Check $STABLE_LOG_FILE"
+  fi
+
+  log "Stable server is running in background with PID $pid."
+  log "Log file: $STABLE_LOG_FILE"
 }
 
 doctor() {
   ensure_pnpm
+  ensure_tmp_dir
+  local stable_pid
+  stable_pid="$(read_stable_pid)"
+
   log "Environment summary"
   printf '  root: %s\n' "$ROOT_DIR"
   printf '  host: %s\n' "$HOST"
-  printf '  dev_port: %s\n' "$DEV_PORT"
-  printf '  dev_domain: %s\n' "$DEV_DOMAIN"
-  printf '  preview_port: %s\n' "$PREVIEW_PORT"
-  printf '  preview_domain: %s\n' "$PREVIEW_DOMAIN"
   printf '  stable_port: %s\n' "$STABLE_PORT"
   printf '  stable_domain: %s\n' "$STABLE_DOMAIN"
   printf '  node: %s\n' "$(node --version 2>/dev/null || echo 'missing')"
@@ -159,6 +225,15 @@ doctor() {
   )"
   printf '  next_build: %s\n' "$([[ -d .next ]] && echo present || echo missing)"
   printf '  node_modules: %s\n' "$([[ -d node_modules ]] && echo present || echo missing)"
+  printf '  stable_pid_file: %s\n' "$([[ -f "$STABLE_PID_FILE" ]] && echo "$STABLE_PID_FILE" || echo missing)"
+  printf '  stable_log_file: %s\n' "$([[ -f "$STABLE_LOG_FILE" ]] && echo "$STABLE_LOG_FILE" || echo missing)"
+  printf '  stable_server: %s\n' "$(
+    if [[ -n "$stable_pid" ]] && is_pid_running "$stable_pid"; then
+      echo "running (PID $stable_pid)"
+    else
+      echo "stopped"
+    fi
+  )"
 }
 
 show_help() {
@@ -171,21 +246,18 @@ Commands:
   install        Rename .env.example -> .env if needed, then install dependencies
   typecheck      Run TypeScript checks
   build          Build the Next.js production bundle
-  dev            Start Next.js dev server on ${HOST}:${DEV_PORT}
-  preview        Start Next.js preview server on ${HOST}:${PREVIEW_PORT}
-  stable         Start Next.js stable server on ${HOST}:${STABLE_PORT}
+  stable         Start stable server in the foreground on ${HOST}:${STABLE_PORT}
+  stable-bg      Start stable server in the background on ${HOST}:${STABLE_PORT}
+  stop-stable    Stop the background stable server
   clean          Remove node_modules/.next and force a fresh install
   doctor         Show local environment status
   help           Show this help text
 
 Environment overrides:
   HOST=0.0.0.0
-  DEV_PORT=9000
-  DEV_DOMAIN=${DEV_DOMAIN}
-  PREVIEW_PORT=9000
-  PREVIEW_DOMAIN=${PREVIEW_DOMAIN}
   STABLE_PORT=9000
   STABLE_DOMAIN=${STABLE_DOMAIN}
+  TMP_DIR=${TMP_DIR}
 EOF
 }
 
@@ -195,9 +267,9 @@ menu() {
   echo "2) Install Dependencies"
   echo "3) Typecheck"
   echo "4) Build"
-  echo "5) Dev Mode"
-  echo "6) Production Preview"
-  echo "7) Stable Serve"
+  echo "5) Stable Serve (foreground)"
+  echo "6) Stable Serve (background)"
+  echo "7) Stop Stable Server"
   echo "8) Clean Reinstall"
   echo "9) Doctor"
   echo "10) Help"
@@ -209,9 +281,9 @@ menu() {
     2) install_dependencies ;;
     3) typecheck_app ;;
     4) build_app ;;
-    5) start_dev ;;
-    6) start_server "preview" "$PREVIEW_PORT" "$PREVIEW_DOMAIN" ;;
-    7) start_server "stable" "$STABLE_PORT" "$STABLE_DOMAIN" ;;
+    5) start_stable_server "foreground" ;;
+    6) start_stable_server "background" ;;
+    7) stop_stable_server ;;
     8) clean_install ;;
     9) doctor ;;
     10) show_help ;;
@@ -225,9 +297,9 @@ case "$ACTION" in
   install) install_dependencies ;;
   typecheck) typecheck_app ;;
   build) build_app ;;
-  dev) start_dev ;;
-  preview) start_server "preview" "$PREVIEW_PORT" "$PREVIEW_DOMAIN" ;;
-  stable) start_server "stable" "$STABLE_PORT" "$STABLE_DOMAIN" ;;
+  stable) start_stable_server "foreground" ;;
+  stable-bg) start_stable_server "background" ;;
+  stop-stable) stop_stable_server ;;
   clean) clean_install ;;
   doctor) doctor ;;
   help|-h|--help) show_help ;;
