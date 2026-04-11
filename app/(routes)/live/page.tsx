@@ -328,10 +328,10 @@ export default function LiveTVPage() {
       </section>
 
       {activeMatch ? (
-        <div className="fixed inset-0 z-40 flex items-start justify-center bg-black/88 px-3 pb-3 pt-[calc(4.9rem+env(safe-area-inset-top))] backdrop-blur-md md:px-4 md:pb-4 md:pt-28">
+        <div className="fixed inset-0 z-[85] flex items-center justify-center bg-black/78 px-2 py-3 backdrop-blur-2xl sm:px-4 sm:py-5">
           <button type="button" className="absolute inset-0" onClick={closeOverlay} aria-label="Close live stream overlay" />
 
-          <div className="liquid-glass relative z-[41] flex h-[min(calc(100vh-6rem),960px)] w-full max-w-7xl flex-col overflow-hidden rounded-[1.85rem] p-3 md:h-[min(calc(100vh-8rem),960px)] md:rounded-[2.2rem] md:p-4">
+          <div className="player-modal-pop liquid-glass relative z-[86] flex h-[min(calc(100dvh-1.5rem),960px)] w-[min(calc(100vw-1rem),1320px)] flex-col overflow-hidden rounded-[1.45rem] p-2 sm:rounded-[2.2rem] sm:p-4">
             <div className="flex items-start justify-between gap-3 border-b border-white/10 bg-black/35 px-4 py-4 md:items-center md:gap-4 md:px-5">
               <div>
                 <p className="text-xs uppercase tracking-[0.28em] text-[var(--muted)]">Live Stream</p>
@@ -361,7 +361,11 @@ export default function LiveTVPage() {
                     className="absolute inset-0 h-full w-full border-0"
                     allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
                     referrerPolicy="origin-when-cross-origin"
-                    sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
+                    sandbox={
+                      settings.strictIframeSandbox
+                        ? "allow-scripts allow-same-origin allow-forms allow-presentation"
+                        : undefined
+                    }
                     allowFullScreen
                   />
                 ) : (
@@ -435,7 +439,7 @@ export default function LiveTVPage() {
 
                 <div className="rounded-[1.2rem] border border-white/8 bg-black/25 px-4 py-4 text-sm leading-6 text-[var(--muted)]">
                   Match cards open the player only after you click them. Embedded streams stay inside this overlay and do
-                  not auto-open elsewhere.
+                  not auto-open elsewhere. Strict iframe sandboxing can be enabled in settings, but some providers reject it.
                 </div>
 
                 {bestSourceQuery.data?.metrics?.length ? (

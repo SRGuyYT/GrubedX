@@ -92,6 +92,70 @@ export function AppBootstrap() {
   }, [pathname, ready, router, settings.autoFocusSearch]);
 
   useEffect(() => {
+    if (!ready || !settings.blockPopups) {
+      return;
+    }
+
+    const nativeOpen = window.open.bind(window);
+    const trustedPopupHosts = new Set(["github.com", "www.github.com", "youtube.com", "www.youtube.com", "youtu.be"]);
+    let lastBlockedAt = 0;
+
+    const blockOnce = (reason: string) => {
+      const now = Date.now();
+      if (now - lastBlockedAt < 1200) {
+        return;
+      }
+
+      lastBlockedAt = now;
+      toast.warning("Popup blocked", {
+        description: reason,
+        duration: 3200,
+      });
+    };
+
+    const isTrustedPopupTarget = (targetUrl: string | URL | undefined | null) => {
+      if (!targetUrl) {
+        return false;
+      }
+
+      try {
+        const parsed = new URL(String(targetUrl), window.location.href);
+        return parsed.origin === window.location.origin || trustedPopupHosts.has(parsed.hostname);
+      } catch {
+        return false;
+      }
+    };
+
+    window.open = ((url?: string | URL, target?: string, features?: string) => {
+      if (isTrustedPopupTarget(url)) {
+        return nativeOpen(url, target, features);
+      }
+
+      blockOnce("GrubX blocked a new window request from an untrusted target.");
+      return null;
+    }) as typeof window.open;
+
+    const onDocumentClick = (event: MouseEvent) => {
+      const target = event.target as Element | null;
+      const anchor = target?.closest?.("a[target='_blank']") as HTMLAnchorElement | null;
+      if (!anchor || isTrustedPopupTarget(anchor.href)) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+      blockOnce("An external ad or popup link was blocked before it could open a new tab.");
+    };
+
+    document.addEventListener("click", onDocumentClick, true);
+
+    return () => {
+      window.open = nativeOpen as typeof window.open;
+      document.removeEventListener("click", onDocumentClick, true);
+    };
+  }, [ready, settings.blockPopups]);
+
+  useEffect(() => {
     if (!ready || !updateQuery.data) {
       return;
     }

@@ -209,17 +209,17 @@ export function PlaybackTheater({
   }
 
   return (
-    <div className="fixed inset-0 z-[85] flex items-start justify-center bg-black/88 px-3 pb-3 pt-[calc(4.9rem+env(safe-area-inset-top))] backdrop-blur-md md:px-4 md:pt-8">
+    <div className="fixed inset-0 z-[85] flex items-center justify-center bg-black/78 px-2 py-3 backdrop-blur-2xl sm:px-4 sm:py-5">
       {!isTheaterMode ? (
         <button type="button" aria-label="Close player overlay" className="absolute inset-0" onClick={onClose} />
       ) : null}
 
       <div
         className={cn(
-          "relative z-[86] flex overflow-hidden bg-black transition-all duration-300",
+          "player-modal-pop relative z-[86] flex overflow-hidden bg-black transition-all duration-300",
           isTheaterMode
-            ? "liquid-glass h-[calc(100vh-6.4rem)] w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)] flex-col rounded-[2rem] p-3 md:h-[calc(100vh-4rem)]"
-            : "liquid-glass h-[min(calc(100vh-7rem),880px)] w-full max-w-6xl flex-col rounded-[2rem] p-3",
+            ? "liquid-glass h-[min(calc(100dvh-1rem),940px)] w-[min(calc(100vw-1rem),1500px)] flex-col rounded-[1.45rem] p-2 sm:rounded-[2rem] sm:p-3"
+            : "liquid-glass h-[min(calc(100dvh-1.5rem),860px)] w-[min(calc(100vw-1rem),1180px)] flex-col rounded-[1.45rem] p-2 sm:rounded-[2rem] sm:p-3",
         )}
       >
         <div className="relative flex h-full w-full flex-col overflow-hidden rounded-[1.4rem] border border-white/10 bg-black">
@@ -294,15 +294,19 @@ export function PlaybackTheater({
                 className="absolute inset-0 h-full w-full border-0"
                 allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
                 referrerPolicy="origin-when-cross-origin"
-                sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
+                sandbox={
+                  settings.strictIframeSandbox
+                    ? "allow-scripts allow-same-origin allow-forms allow-presentation"
+                    : undefined
+                }
                 allowFullScreen
               />
             )}
           </div>
 
           {settings.showPlaybackTips ? (
-            <div className="absolute bottom-4 left-4 z-10 rounded-2xl border border-white/10 bg-black/60 px-4 py-3 text-xs text-[var(--muted)]">
-              Press Esc to close. Popups stay blocked. Playback progress saves locally every few seconds.
+            <div className="keyboard-only absolute bottom-4 left-4 z-10 rounded-2xl border border-white/10 bg-black/60 px-4 py-3 text-xs text-[var(--muted)]">
+              Press Esc to close. GrubX blocks app-level popups and can use strict iframe sandboxing from Settings.
             </div>
           ) : null}
 

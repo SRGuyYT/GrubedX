@@ -131,6 +131,33 @@ a {
   display: none;
 }
 
+.keyboard-only {
+  display: none !important;
+}
+
+.player-modal-pop {
+  transform-origin: center center;
+  animation: player-modal-pop 180ms ease-out both;
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.54);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .keyboard-only {
+    display: block !important;
+  }
+}
+
+@keyframes player-modal-pop {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.965);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 :focus-visible {
   outline: 2px solid color-mix(in srgb, var(--accent) 82%, white 18%);
   outline-offset: 2px;

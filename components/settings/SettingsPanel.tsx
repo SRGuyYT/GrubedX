@@ -312,8 +312,11 @@ export function SettingsPanel() {
           <SettingCard title="Playback tips" description="Show subtle in-player guidance for shortcuts and controls.">
             <ToggleSwitch checked={settings.showPlaybackTips} onChange={(checked) => setSetting("showPlaybackTips", checked, "Playback tips updated.")} disabled={isPending} />
           </SettingCard>
-          <SettingCard title="Block popups" description="Embedded streams stay sandboxed and cannot open popups or new windows.">
+          <SettingCard title="Block popups" description="Popup permissions stay disabled for embedded streams. Some providers reject sandboxed iframes, so the player uses a strict allow list instead.">
             <ToggleSwitch checked={true} onChange={() => undefined} disabled />
+          </SettingCard>
+          <SettingCard title="Strict iframe blocker" description="Adds browser sandboxing back onto player iframes for maximum popup blocking. Turn it off if a provider says to remove sandbox attributes.">
+            <ToggleSwitch checked={settings.strictIframeSandbox} onChange={(checked) => setSetting("strictIframeSandbox", checked, "Strict iframe blocker updated.")} disabled={isPending} />
           </SettingCard>
         </div>
 

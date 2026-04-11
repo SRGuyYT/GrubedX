@@ -7,7 +7,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="grain min-h-screen overflow-x-hidden">
       <Navbar />
-      <div className="pb-[calc(5.9rem+env(safe-area-inset-bottom))] pt-[calc(5.2rem+env(safe-area-inset-top))] md:pb-12 md:pl-24 md:pt-8 xl:pl-80">
+      <div className="pb-12 pt-[calc(5.5rem+env(safe-area-inset-top))] md:pt-[calc(6rem+env(safe-area-inset-top))]">
         <main>{children}</main>
         <Footer />
       </div>
