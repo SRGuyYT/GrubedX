@@ -37,7 +37,7 @@ export async function POST(request: Request) {
     const providerName = clampText(body.providerName, 120) || provider?.name || "Unknown server";
     const reason = body.reason;
 
-    if (!providerId || !provider) {
+    if (!providerId) {
       return NextResponse.json({ error: "Choose a valid server to report." }, { status: 400 });
     }
 
@@ -71,6 +71,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("Provider report failed", error);
-    return NextResponse.json({ error: "Unable to send your report right now." }, { status: 500 });
+    return NextResponse.json({ error: "Could not send the report right now. Please try again later." }, { status: 500 });
   }
 }

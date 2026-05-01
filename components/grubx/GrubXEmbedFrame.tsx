@@ -1,10 +1,11 @@
 import { notFound } from "next/navigation";
 
+import { GrubXEmbedClientFrame } from "@/components/grubx/GrubXEmbedClientFrame";
 import { parsePlaybackOptions } from "@/lib/grubx/params";
 import { assertGrubXProvider, resolveGrubXProviderUrl } from "@/lib/grubx/providers";
 import type { GrubXMediaType } from "@/types/grubx";
 
-const SAFE_IFRAME_SANDBOX = "allow-scripts allow-same-origin allow-presentation allow-forms";
+const readParam = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value);
 
 export function GrubXEmbedFrame({
   provider,
@@ -31,17 +32,13 @@ export function GrubXEmbedFrame({
       episode,
       parsePlaybackOptions(searchParams),
     );
+    const strictSandbox = readParam(searchParams.strictSandbox) === "true";
 
     return (
-      <iframe
-        src={source}
+      <GrubXEmbedClientFrame
+        source={source}
         title={`${selectedProvider.name} ${type} embed`}
-        className="h-full w-full"
-        allow="fullscreen; picture-in-picture; encrypted-media"
-        allowFullScreen
-        referrerPolicy="no-referrer"
-        sandbox={SAFE_IFRAME_SANDBOX}
-        style={{ border: 0, width: "100vw", height: "100dvh", display: "block", background: "#000" }}
+        strictSandbox={strictSandbox}
       />
     );
   } catch {

@@ -10,7 +10,7 @@ export const LIVE_HISTORY_STORAGE_KEY = "grubx_recent_live";
 export const STORAGE_EVENT_NAME = "grubx:storage";
 
 const defaultProviderSettings = Object.fromEntries(
-  appConfig.providers.map((provider) => [provider.id, provider.enabled && provider.safety !== "blocked"]),
+  appConfig.providers.map((provider) => [provider.id, provider.enabled]),
 );
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -28,7 +28,7 @@ export const DEFAULT_SETTINGS: Settings = {
   inlineTrailerMuted: true,
   showPlaybackTips: true,
   blockPopups: true,
-  strictIframeSandbox: true,
+  strictIframeSandbox: false,
   avoidLimitedProtectionServers: true,
   allowLimitedProtectionProviders: false,
   autoplayPlayback: true,
@@ -80,7 +80,7 @@ const readProviderSettings = (value: unknown) => {
   return Object.fromEntries(
     appConfig.providers.map((provider) => [
       provider.id,
-      readBoolean(input[provider.id], provider.enabled && provider.safety !== "blocked"),
+      readBoolean(input[provider.id], provider.enabled),
     ]),
   );
 };

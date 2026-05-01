@@ -1,6 +1,7 @@
 "use client";
 
-import { type FormEvent, useMemo, useState, useTransition } from "react";
+import { type FormEvent, useEffect, useMemo, useState, useTransition } from "react";
+import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
 import { Database, Film, Plus, RotateCcw, Shield, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
@@ -9,6 +10,13 @@ import { LoadingState } from "@/components/feedback/LoadingState";
 import { ToggleSwitch } from "@/components/settings/ToggleSwitch";
 import { useSettingsContext } from "@/context/SettingsContext";
 import { GRUBX_PROVIDERS } from "@/lib/grubx/providers";
+import {
+  getAgeGateStatus,
+  getRiskConsentAcceptedAt,
+  hasRiskConsent,
+  isUnder13Suspended,
+  resetPlaybackSafetyConsent,
+} from "@/lib/grubx/consent";
 import { queryKeys } from "@/lib/queryKeys";
 import type { CustomProviderSettings, Settings } from "@/types/settings";
 
@@ -94,6 +102,11 @@ export function SettingsPanel() {
   const [customName, setCustomName] = useState("");
   const [customBaseUrl, setCustomBaseUrl] = useState("");
   const [customPattern, setCustomPattern] = useState("");
+  const [consentSnapshot, setConsentSnapshot] = useState({
+    ageGateStatus: "Not answered",
+    riskConsent: "Not accepted",
+    under13Suspended: false,
+  });
   const queryClient = useQueryClient();
   const { ready, settings, resetSettings, updateSettings, clearAllData } = useSettingsContext();
 
@@ -102,7 +115,6 @@ export function SettingsPanel() {
       GRUBX_PROVIDERS.filter(
         (provider) =>
           provider.enabled &&
-          provider.safety !== "blocked" &&
           settings.providerSettings[provider.id] !== false,
       ).length,
     [settings.providerSettings],
@@ -114,6 +126,20 @@ export function SettingsPanel() {
       toast.success(message);
     });
   };
+
+  const refreshConsentSnapshot = () => {
+    const ageGateStatus = getAgeGateStatus();
+    const riskAcceptedAt = getRiskConsentAcceptedAt();
+    setConsentSnapshot({
+      ageGateStatus: ageGateStatus === "13plus" ? "13 or older" : ageGateStatus === "under13" ? "Under 13" : "Not answered",
+      riskConsent: hasRiskConsent() ? `Accepted${riskAcceptedAt ? ` on ${new Date(riskAcceptedAt).toLocaleString()}` : ""}` : "Not accepted",
+      under13Suspended: isUnder13Suspended(),
+    });
+  };
+
+  useEffect(() => {
+    refreshConsentSnapshot();
+  }, []);
 
   const setProviderEnabled = (providerId: string, enabled: boolean) => {
     setSetting(
@@ -203,7 +229,40 @@ export function SettingsPanel() {
       </div>
 
       <div className="grid gap-8 xl:grid-cols-2">
-        <Section icon={Shield} title="Safety" description="Safe browsing and popup behavior for external embeds.">
+        <Section icon={Shield} title="Playback Safety & Compatibility" description="Age gate, risk consent, and compatibility playback controls.">
+          <div className="grid gap-3 md:grid-cols-3">
+            <div className="rounded-[1rem] border border-white/8 bg-black/22 px-4 py-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--muted)]">Age gate</p>
+              <p className="mt-2 text-sm font-semibold text-white">{consentSnapshot.ageGateStatus}</p>
+            </div>
+            <div className="rounded-[1rem] border border-white/8 bg-black/22 px-4 py-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--muted)]">Risk consent</p>
+              <p className="mt-2 text-sm font-semibold text-white">{consentSnapshot.riskConsent}</p>
+            </div>
+            <div className="rounded-[1rem] border border-white/8 bg-black/22 px-4 py-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--muted)]">Under-13 suspension</p>
+              <p className="mt-2 text-sm font-semibold text-white">{consentSnapshot.under13Suspended ? "Active" : "Not active"}</p>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                resetPlaybackSafetyConsent();
+                refreshConsentSnapshot();
+                toast.success("Playback safety consent reset.");
+              }}
+              className="inline-flex min-h-11 items-center rounded-full border border-white/10 bg-white/8 px-5 text-sm font-semibold text-white"
+            >
+              Reset consent
+            </button>
+            <Link href="/safety" className="inline-flex min-h-11 items-center rounded-full border border-white/10 bg-white/8 px-5 text-sm font-semibold text-white">
+              Safety page
+            </Link>
+            <Link href="/terms" className="inline-flex min-h-11 items-center rounded-full border border-white/10 bg-white/8 px-5 text-sm font-semibold text-white">
+              Terms page
+            </Link>
+          </div>
           <SettingRow title="SAFE_MODE" description="Strict mode watches links, popups, redirects, and overlay traps.">
             <ToggleSwitch
               checked={settings.safeMode}
@@ -229,16 +288,6 @@ export function SettingsPanel() {
             <ToggleSwitch
               checked={settings.avoidLimitedProtectionServers}
               onChange={(checked) => setSetting("avoidLimitedProtectionServers", checked, "Server preference updated.")}
-              disabled={isPending}
-            />
-          </SettingRow>
-          <SettingRow
-            title="Allow limited-protection providers"
-            description="These providers may show unsafe ads or popups. Keep this off unless you are testing."
-          >
-            <ToggleSwitch
-              checked={settings.allowLimitedProtectionProviders}
-              onChange={(checked) => setSetting("allowLimitedProtectionProviders", checked, "Limited provider access updated.")}
               disabled={isPending}
             />
           </SettingRow>
@@ -307,17 +356,23 @@ export function SettingsPanel() {
       >
         <div className="grid gap-3 lg:grid-cols-2">
           {GRUBX_PROVIDERS.map((provider) => {
-            const blocked = provider.safety === "blocked" || !provider.enabled;
+            const unavailable = !provider.enabled;
+            const label =
+              provider.safety === "standard"
+                ? "Standard"
+                : provider.safety === "reported"
+                  ? "Reported by users"
+                  : "Compatibility";
             return (
               <SettingRow
                 key={provider.id}
-                title={provider.name}
-                description={blocked ? provider.notes ?? "This provider is unavailable." : provider.baseUrl}
+                title={`${provider.name} - ${label}`}
+                description={provider.notes ?? provider.baseUrl}
               >
                 <ToggleSwitch
-                  checked={!blocked && settings.providerSettings[provider.id] !== false}
+                  checked={!unavailable && settings.providerSettings[provider.id] !== false}
                   onChange={(checked) => setProviderEnabled(provider.id, checked)}
-                  disabled={isPending || blocked}
+                  disabled={isPending || unavailable}
                 />
               </SettingRow>
             );

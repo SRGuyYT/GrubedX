@@ -19,6 +19,8 @@ const AREAS = [
   "design-ui",
   "account-data",
   "external-media",
+  "safety",
+  "contact",
   "other",
 ] as const;
 const PRIORITIES = ["low", "medium", "high"] as const;
@@ -53,6 +55,8 @@ const AREA_LABELS: Record<(typeof AREAS)[number], string> = {
   "design-ui": "Design/UI",
   "account-data": "Account/Data",
   "external-media": "External Media",
+  safety: "Safety",
+  contact: "Contact",
   other: "Other",
 };
 

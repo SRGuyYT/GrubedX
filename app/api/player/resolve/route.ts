@@ -96,6 +96,7 @@ const buildCandidate = async ({
   episode,
   providerOptions,
   allowLimitedProtectionProviders,
+  strictSandbox,
 }: {
   provider: GrubXProvider;
   mediaType: "movie" | "tv";
@@ -104,6 +105,7 @@ const buildCandidate = async ({
   episode: number;
   providerOptions: ReturnType<typeof parsePlaybackOptions>;
   allowLimitedProtectionProviders: boolean;
+  strictSandbox: boolean;
 }): Promise<GrubXServerCandidate> => {
   if (!isProviderAllowed(provider.id, { allowLimitedProtectionProviders })) {
     return {
@@ -114,12 +116,12 @@ const buildCandidate = async ({
       score: -9999,
       status: "blocked",
       requiresRelaxedSandbox: provider.requiresRelaxedSandbox,
-      reason: "This server is blocked.",
+      reason: "This server is turned off.",
     };
   }
 
   const providerUrl = resolveGrubXProviderUrl(provider.id, mediaType, mediaId, season, episode, providerOptions);
-  const embedUrl = buildGrubXEmbedPath({
+  const embedPath = buildGrubXEmbedPath({
     provider: provider.id,
     type: mediaType,
     id: mediaId,
@@ -127,6 +129,7 @@ const buildCandidate = async ({
     episode,
     options: providerOptions,
   });
+  const embedUrl = strictSandbox ? `${embedPath}${embedPath.includes("?") ? "&" : "?"}strictSandbox=true` : embedPath;
   const probe = await probeCandidate(providerUrl);
   const score = scoreServerCandidate({
     safety: provider.safety,
@@ -141,7 +144,14 @@ const buildCandidate = async ({
     latencyMs: probe.ok ? probe.latencyMs : null,
     score,
     status: probe.ok ? "ready" : "failed",
+    compatibilityMode: provider.compatibilityMode,
     requiresRelaxedSandbox: provider.requiresRelaxedSandbox,
+    safetyLabel:
+      provider.safety === "standard"
+        ? "Standard"
+        : provider.safety === "reported"
+          ? "Reported by users"
+          : "Compatibility",
     reason: probe.ok ? undefined : probe.reason ?? "This server did not respond.",
   };
 };
@@ -163,6 +173,7 @@ export async function GET(request: Request) {
     const progress = progressValue ? Math.max(0, Number(progressValue)) : null;
     const requestedProvider = searchParams.get("provider")?.trim().toLowerCase() ?? null;
     const allowLimitedProtectionProviders = searchParams.get("allowLimitedProtectionProviders") === "true";
+    const strictSandbox = searchParams.get("strictSandbox") === "true";
     const enabledProviders = new Set(
       (searchParams.get("enabledProviders") ?? "")
         .split(",")
@@ -196,7 +207,7 @@ export async function GET(request: Request) {
     }
 
     if (providers.length === 0) {
-      throw new Error("No safe servers are available.");
+      throw new Error("No playback servers are available.");
     }
 
     const candidates = await Promise.all(
@@ -209,6 +220,7 @@ export async function GET(request: Request) {
           episode,
           providerOptions,
           allowLimitedProtectionProviders,
+          strictSandbox,
         }),
       ),
     );

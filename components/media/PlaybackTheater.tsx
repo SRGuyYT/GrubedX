@@ -1,12 +1,24 @@
 "use client";
 
 import { type FormEvent, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, AlertTriangle, Eye, EyeOff, Flag, Maximize2, MessageSquare, Pause, Play, RefreshCw, Server, ShieldAlert, VolumeX, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { cn } from "@/lib/cn";
+import { AgeGateModal } from "@/components/legal/AgeGateModal";
+import { RiskConsentModal } from "@/components/legal/RiskConsentModal";
 import { dataLayer } from "@/lib/dataLayer";
+import {
+  acceptRiskConsent,
+  getAgeGateStatus,
+  hasRiskConsent,
+  isUnder13Suspended,
+  markAge13Plus,
+  suspendUnder13,
+} from "@/lib/grubx/consent";
 import { getWatchHistory, saveWatchProgress } from "@/lib/grubx/account";
 import { createGrubXIframeController } from "@/lib/grubx/iframeController";
 import { onPlayerStateChange } from "@/lib/grubx/watchParty";
@@ -40,10 +52,8 @@ const PROVIDER_REPORTS_KEY = "grubx.providerReports";
 const PROVIDER_FAILURES_KEY = "grubx.providerFailures";
 const PROVIDER_SUCCESSES_KEY = "grubx.providerSuccesses";
 const PREFERRED_PROVIDER_KEY = "grubx.preferredProvider";
-const BLOCKED_PROVIDERS_KEY = "grubx.blockedProviders";
 const POPUP_MONITOR_WINDOW_MS = 3500;
 const STRICT_IFRAME_SANDBOX = "allow-scripts allow-same-origin allow-presentation allow-forms";
-const emergencyBlockReasons = new Set<GrubXProviderReportReason>(["adult-ads", "popups", "redirects"]);
 
 const reportReasons: Array<{ value: GrubXProviderReportReason; label: string }> = [
   { value: "popups", label: "Popups / new tabs" },
@@ -92,21 +102,6 @@ const savePreferredProvider = (providerId: string) => {
   window.localStorage.setItem(PREFERRED_PROVIDER_KEY, providerId);
 };
 
-const readBlockedProviders = () => {
-  try {
-    const value = JSON.parse(window.localStorage.getItem(BLOCKED_PROVIDERS_KEY) ?? "[]") as unknown;
-    return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
-  } catch {
-    return [];
-  }
-};
-
-const saveBlockedProvider = (providerId: string) => {
-  const blocked = new Set(readBlockedProviders());
-  blocked.add(providerId);
-  window.localStorage.setItem(BLOCKED_PROVIDERS_KEY, JSON.stringify(Array.from(blocked)));
-};
-
 const buildCustomProviderEmbedUrl = ({
   provider,
   mediaType,
@@ -146,6 +141,7 @@ export function PlaybackTheater({
   backdropPath: string | null;
   seasons?: SeasonSummary[];
 }) {
+  const router = useRouter();
   const { ready, settings } = useSettingsContext();
   const [isTheaterMode, setIsTheaterMode] = useState(settings.theaterModeDefault);
   const [selectedSeason, setSelectedSeason] = useState(1);
@@ -158,8 +154,10 @@ export function PlaybackTheater({
   const [attemptedProviders, setAttemptedProviders] = useState<Set<string>>(() => new Set());
   const [iframeFailed, setIframeFailed] = useState(false);
   const [popupSuspected, setPopupSuspected] = useState(false);
-  const [blockedProviderWarning, setBlockedProviderWarning] = useState(false);
-  const [blockedProviderVersion, setBlockedProviderVersion] = useState(0);
+  const [playbackConsentReady, setPlaybackConsentReady] = useState(false);
+  const [showAgeGate, setShowAgeGate] = useState(false);
+  const [showRiskConsent, setShowRiskConsent] = useState(false);
+  const [sandboxFallbackActive, setSandboxFallbackActive] = useState(false);
   const [controlsVisible, setControlsVisible] = useState(true);
   const [serverSheetOpen, setServerSheetOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
@@ -210,6 +208,8 @@ export function PlaybackTheater({
       settings.embedQualityMode,
       settings.providerSettings,
       settings.uiTheme,
+      settings.strictIframeSandbox,
+      sandboxFallbackActive,
       progressQuery.data?.currentTime ?? null,
     ],
     queryFn: async ({ signal }: { signal: AbortSignal }) => {
@@ -226,6 +226,7 @@ export function PlaybackTheater({
         chromecast: "true",
         hideServer: "false",
         overlay: "true",
+        strictSandbox: settings.strictIframeSandbox && !sandboxFallbackActive ? "true" : "false",
         theme: settings.uiTheme,
         title,
         allowLimitedProtectionProviders: settings.allowLimitedProtectionProviders ? "true" : "false",
@@ -260,7 +261,7 @@ export function PlaybackTheater({
         candidates: GrubXServerCandidate[];
       };
     },
-    enabled: open,
+    enabled: open && playbackConsentReady,
     staleTime: 1000 * 60,
   });
 
@@ -282,7 +283,9 @@ export function PlaybackTheater({
         latencyMs: null,
         score: 70 - index,
         status: "ready" as const,
+        compatibilityMode: true,
         requiresRelaxedSandbox: false,
+        safetyLabel: "Compatibility" as const,
         reason: "Custom provider. Built-in ad and popup review is not applied yet.",
       }));
     const allCandidates = [...serverCandidates, ...customCandidates];
@@ -295,30 +298,8 @@ export function PlaybackTheater({
     const failures = readStats(PROVIDER_FAILURES_KEY);
     const successes = readStats(PROVIDER_SUCCESSES_KEY);
     const preferredProvider = readPreferredProvider();
-    const locallyBlockedProviders = new Set(readBlockedProviders());
-
     return allCandidates
       .map((candidate) => {
-        if (locallyBlockedProviders.has(candidate.providerId)) {
-          return {
-            ...candidate,
-            embedUrl: "",
-            score: -9999,
-            status: "blocked" as const,
-            reason: "This server was blocked for unsafe ads.",
-          };
-        }
-
-        if (candidate.requiresRelaxedSandbox && !settings.allowLimitedProtectionProviders) {
-          return {
-            ...candidate,
-            embedUrl: "",
-            score: -9999,
-            status: "blocked" as const,
-            reason: "Limited-protection providers are off.",
-          };
-        }
-
         if (candidate.status === "blocked") {
           return candidate;
         }
@@ -326,8 +307,8 @@ export function PlaybackTheater({
         const localReports = reports[candidate.providerId]?.reports ?? 0;
         const localFailures = failures[candidate.providerId]?.failures ?? 0;
         const localSuccesses = successes[candidate.providerId]?.successes ?? 0;
-        const limitedProtectionPenalty =
-          settings.avoidLimitedProtectionServers && candidate.requiresRelaxedSandbox ? 45 : 0;
+        const compatibilityPenalty =
+          settings.avoidLimitedProtectionServers && candidate.compatibilityMode ? 12 : 0;
         return {
           ...candidate,
           score:
@@ -335,19 +316,18 @@ export function PlaybackTheater({
             (localSuccesses > 0 ? 20 : 0) +
             (preferredProvider === candidate.providerId ? 12 : 0) -
             localFailures * 35 -
-            localReports * 50 -
-            limitedProtectionPenalty,
+            localReports * 12 -
+            compatibilityPenalty,
           reason:
             localReports > 0
-              ? "This server was reported for unsafe ads or playback problems on this device."
-              : limitedProtectionPenalty > 0
-                ? "Limited protection mode is available but de-prioritized by your settings."
+              ? "This server has local reports for unsafe ads or playback problems."
+              : compatibilityPenalty > 0
+                ? "Compatibility mode works better for providers but is lower priority in your settings."
               : candidate.reason,
         };
       })
       .sort((left, right) => right.score - left.score);
   }, [
-    blockedProviderVersion,
     mediaId,
     mediaType,
     open,
@@ -363,7 +343,7 @@ export function PlaybackTheater({
     () => candidates.find((candidate) => candidate.providerId === selectedProvider) ?? null,
     [candidates, selectedProvider],
   );
-  const iframeSandbox = settings.strictIframeSandbox ? STRICT_IFRAME_SANDBOX : undefined;
+  const iframeSandbox = settings.strictIframeSandbox && !sandboxFallbackActive ? STRICT_IFRAME_SANDBOX : undefined;
 
   const readyCandidates = useMemo(
     () => candidates.filter((candidate) => candidate.status === "ready"),
@@ -406,7 +386,10 @@ export function PlaybackTheater({
       setAttemptedProviders(new Set());
       setIframeFailed(false);
       setPopupSuspected(false);
-      setBlockedProviderWarning(false);
+      setPlaybackConsentReady(false);
+      setShowAgeGate(false);
+      setShowRiskConsent(false);
+      setSandboxFallbackActive(false);
       setControlsVisible(true);
       setServerSheetOpen(false);
       setReportOpen(false);
@@ -423,11 +406,48 @@ export function PlaybackTheater({
     setAttemptedProviders(new Set());
     setIframeFailed(false);
     setPopupSuspected(false);
-    setBlockedProviderWarning(false);
+    setPlaybackConsentReady(false);
+    setShowAgeGate(false);
+    setShowRiskConsent(false);
+    setSandboxFallbackActive(false);
     setControlsVisible(true);
     activatedAtRef.current = null;
     setWatchHistory(getWatchHistory());
   }, [open, settings.defaultProvider, settings.theaterModeDefault]);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    if (isUnder13Suspended()) {
+      setPlaybackConsentReady(false);
+      setShowAgeGate(false);
+      setShowRiskConsent(false);
+      onClose();
+      router.push("/under-13");
+      return;
+    }
+
+    const ageGateStatus = getAgeGateStatus();
+    if (ageGateStatus !== "13plus") {
+      setPlaybackConsentReady(false);
+      setShowAgeGate(true);
+      setShowRiskConsent(false);
+      return;
+    }
+
+    if (!hasRiskConsent()) {
+      setPlaybackConsentReady(false);
+      setShowAgeGate(false);
+      setShowRiskConsent(true);
+      return;
+    }
+
+    setShowAgeGate(false);
+    setShowRiskConsent(false);
+    setPlaybackConsentReady(true);
+  }, [onClose, open, router]);
 
   useEffect(() => {
     if (!open || !controlsVisible) {
@@ -445,20 +465,20 @@ export function PlaybackTheater({
     setControlsUnlocked(false);
     setIframeFailed(false);
     setPopupSuspected(false);
-    setBlockedProviderWarning(false);
+    setSandboxFallbackActive(false);
     activatedAtRef.current = null;
   }, [mediaId, mediaType, selectedEpisode, selectedProvider, selectedSeason]);
 
   useEffect(() => {
-    if (!open || manualProvider || selectedProvider || readyCandidates.length === 0) {
+    if (!open || !playbackConsentReady || manualProvider || selectedProvider || readyCandidates.length === 0) {
       return;
     }
 
     setSelectedProvider(readyCandidates[0].providerId as GrubXProviderId);
-  }, [manualProvider, open, readyCandidates, selectedProvider]);
+  }, [manualProvider, open, playbackConsentReady, readyCandidates, selectedProvider]);
 
   useEffect(() => {
-    if (!open || manualProvider || !selectedProvider || readyCandidates.length === 0) {
+    if (!open || !playbackConsentReady || manualProvider || !selectedProvider || readyCandidates.length === 0) {
       return;
     }
 
@@ -466,7 +486,7 @@ export function PlaybackTheater({
     if (!current) {
       setSelectedProvider(readyCandidates[0].providerId as GrubXProviderId);
     }
-  }, [manualProvider, open, readyCandidates, selectedProvider]);
+  }, [manualProvider, open, playbackConsentReady, readyCandidates, selectedProvider]);
 
   useEffect(() => {
     if (!open || !selectedProvider) {
@@ -502,17 +522,12 @@ export function PlaybackTheater({
 
     bumpProviderStat(PROVIDER_REPORTS_KEY, activeCandidate.providerId, "reports");
     bumpProviderStat(PROVIDER_FAILURES_KEY, activeCandidate.providerId, "failures");
-    saveBlockedProvider(activeCandidate.providerId);
-    setBlockedProviderVersion((version) => version + 1);
     setPopupSuspected(true);
-    setBlockedProviderWarning(true);
     setIframeFailed(true);
-    setControlsUnlocked(false);
     setControlsVisible(true);
     setControlDock("top");
     activatedAtRef.current = null;
-    toast.warning("This server was blocked for unsafe ads. Trying the next safe server.");
-    tryNextServer(activeCandidate.providerId);
+    toast.warning("This server may have opened another window. You can switch servers or report it.");
   };
 
   useEffect(() => {
@@ -629,6 +644,8 @@ export function PlaybackTheater({
     setManualProvider(manual);
     setControlsUnlocked(false);
     setIframeFailed(false);
+    setPopupSuspected(false);
+    setSandboxFallbackActive(false);
     setServerSheetOpen(false);
     savePreferredProvider(providerId);
   };
@@ -644,12 +661,12 @@ export function PlaybackTheater({
       );
 
     if (!fallbackCandidate) {
-      toast.error("No other safe servers are available right now.");
+      toast.error("No other servers are available right now.");
       return;
     }
 
     selectProvider(fallbackCandidate.providerId, true);
-    toast.message("Trying the next safe server...");
+    toast.message("Trying the next server...");
   };
 
   const markActiveProviderFailure = () => {
@@ -658,6 +675,13 @@ export function PlaybackTheater({
     }
 
     bumpProviderStat(PROVIDER_FAILURES_KEY, activeCandidate.providerId, "failures");
+    if (settings.strictIframeSandbox && !sandboxFallbackActive && playbackConsentReady) {
+      setSandboxFallbackActive(true);
+      setControlsVisible(true);
+      toast.message("Trying compatibility mode for this server...");
+      return;
+    }
+
     setIframeFailed(true);
     tryNextServer();
   };
@@ -677,21 +701,7 @@ export function PlaybackTheater({
       return;
     }
 
-    const reportedProviderId = activeCandidate.providerId;
-    const isEmergencyReport = emergencyBlockReasons.has(reportReason);
-
-    bumpProviderStat(PROVIDER_REPORTS_KEY, reportedProviderId, "reports");
-
-    if (isEmergencyReport) {
-      saveBlockedProvider(reportedProviderId);
-      setBlockedProviderVersion((version) => version + 1);
-      setBlockedProviderWarning(true);
-      setPopupSuspected(false);
-      setIframeFailed(true);
-      setControlsUnlocked(false);
-      toast.warning("This server was blocked for unsafe ads. Trying the next safe server.");
-      tryNextServer(reportedProviderId);
-    }
+    bumpProviderStat(PROVIDER_REPORTS_KEY, activeCandidate.providerId, "reports");
 
     const response = await fetch("/api/provider-report", {
       method: "POST",
@@ -718,9 +728,6 @@ export function PlaybackTheater({
     toast.success("Thanks - your report was sent.");
     setReportOpen(false);
     setReportDetails("");
-    if (!isEmergencyReport) {
-      tryNextServer();
-    }
   };
 
   const submitFeedback = async (event: FormEvent<HTMLFormElement>) => {
@@ -774,6 +781,40 @@ export function PlaybackTheater({
         }
       }}
     >
+      {showAgeGate ? (
+        <AgeGateModal
+          onConfirm13Plus={() => {
+            markAge13Plus();
+            setShowAgeGate(false);
+            if (hasRiskConsent()) {
+              setPlaybackConsentReady(true);
+            } else {
+              setShowRiskConsent(true);
+            }
+          }}
+          onUnder13={() => {
+            suspendUnder13();
+            setShowAgeGate(false);
+            setPlaybackConsentReady(false);
+            onClose();
+            router.push("/under-13");
+          }}
+        />
+      ) : null}
+      {showRiskConsent ? (
+        <RiskConsentModal
+          onAccept={() => {
+            acceptRiskConsent();
+            setShowRiskConsent(false);
+            setPlaybackConsentReady(true);
+          }}
+          onCancel={() => {
+            setShowRiskConsent(false);
+            setPlaybackConsentReady(false);
+            onClose();
+          }}
+        />
+      ) : null}
       <div className="relative h-[100dvh] w-screen overflow-hidden bg-black">
         <div
           className={cn(
@@ -848,16 +889,17 @@ export function PlaybackTheater({
                       : "No server selected"}
                 </span>
               </div>
-              {activeCandidate?.requiresRelaxedSandbox ? (
-                <span className="inline-flex min-h-11 shrink-0 items-center rounded-full border border-[var(--accent)]/30 bg-[var(--accent-soft)] px-4 text-xs font-semibold text-[var(--accent)]">
-                  Limited protection mode
-                </span>
-              ) : null}
-              {!settings.strictIframeSandbox ? (
+              {activeCandidate?.compatibilityMode || !settings.strictIframeSandbox || sandboxFallbackActive ? (
                 <span className="inline-flex min-h-11 shrink-0 items-center rounded-full border border-red-300/25 bg-red-500/12 px-4 text-xs font-semibold text-red-100">
-                  Sandbox off
+                  Compatibility mode is active. Ads and popups may appear from third-party providers.
                 </span>
               ) : null}
+              <Link
+                href="/safety"
+                className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/8 px-4 text-sm font-semibold text-white transition active:scale-[0.98]"
+              >
+                Safety Info
+              </Link>
               <button
                 type="button"
                 onClick={() => setServerSheetOpen(true)}
@@ -971,14 +1013,10 @@ export function PlaybackTheater({
                   <AlertTriangle className="size-7" />
                 </span>
                 <span className="max-w-xl text-lg font-semibold text-white">
-                  {blockedProviderWarning || candidates.length === 0
-                    ? "This server was blocked for unsafe ads."
-                    : "No safe server is ready right now."}
+                  {candidates.length === 0 ? "No playback server is ready right now." : "No server selected."}
                 </span>
                 <span className="max-w-xl text-sm leading-6 text-[var(--muted)]">
-                  {blockedProviderWarning || candidates.length === 0
-                    ? "We blocked this provider to keep GrubX safe. Try another server or report this issue."
-                    : "Try another server or send a report so it can be reviewed."}
+                  Third-party providers may show unsafe ads. Try another server or send a report so it can be reviewed.
                 </span>
                 <div className="flex flex-wrap justify-center gap-2">
                   <button
@@ -986,7 +1024,7 @@ export function PlaybackTheater({
                     onClick={() => tryNextServer()}
                     className="rounded-full bg-white px-5 py-2.5 text-sm font-bold text-black transition hover:brightness-95"
                   >
-                    Try Next Safe Server
+                    Try Next Server
                   </button>
                   <button
                     type="button"
@@ -1010,18 +1048,16 @@ export function PlaybackTheater({
                   <ShieldAlert className="size-7" />
                 </span>
                 <span className="max-w-xl text-lg font-semibold text-white">
-                  {blockedProviderWarning || activeCandidate.status === "blocked"
-                    ? "This server was blocked for unsafe ads."
-                    : popupSuspected
-                      ? "This server tried to open another window."
+                  {popupSuspected
+                    ? "This server may have opened another window."
+                    : activeCandidate.status === "blocked"
+                      ? "This server is turned off."
                       : "This server may be unsafe or broken."}
                 </span>
                 <span className="max-w-xl text-sm leading-6 text-[var(--muted)]">
-                  {blockedProviderWarning || activeCandidate.status === "blocked"
-                    ? "We blocked this provider to keep GrubX safe. Try another server or report this issue."
-                    : popupSuspected
-                      ? "Try a different server. This provider was marked unsafe on this device."
-                      : activeCandidate.reason ?? "Switch servers or report the issue so this provider can be reviewed."}
+                  {popupSuspected
+                    ? "Try a different server or report the provider. GrubX does not control third-party provider ads."
+                    : activeCandidate.reason ?? "Switch servers or report the issue so this provider can be reviewed."}
                 </span>
                 <div className="flex flex-wrap justify-center gap-2">
                   <button
@@ -1029,7 +1065,7 @@ export function PlaybackTheater({
                     onClick={() => tryNextServer()}
                     className="rounded-full bg-white px-5 py-2.5 text-sm font-bold text-black transition hover:brightness-95"
                   >
-                    Try Next Safe Server
+                    Try Next Server
                   </button>
                   <button
                     type="button"
@@ -1080,9 +1116,9 @@ export function PlaybackTheater({
                 <span className="rounded-[1.2rem] border border-cyan-300/30 bg-cyan-400/10 p-4 text-cyan-200">
                   <ShieldAlert className="size-7" />
                 </span>
-                <span className="max-w-lg text-xl font-semibold text-white">Popup shield is active</span>
+                <span className="max-w-lg text-xl font-semibold text-white">Click to activate third-party playback</span>
                 <span className="max-w-xl text-sm leading-6 text-[var(--muted)]">
-                  GrubX is holding player controls until you are ready. Click once to unlock this stream.
+                  Third-party providers may show unsafe ads, popups, or redirects. Use a trusted ad blocker and avoid suspicious links.
                 </span>
               </button>
             ) : null}
@@ -1179,9 +1215,9 @@ export function PlaybackTheater({
                             : candidate.status === "failed"
                               ? "Failed"
                               : candidate.status === "blocked"
-                                ? "Blocked"
+                                ? "Turned off"
                                 : "Untested"}
-                          {candidate.requiresRelaxedSandbox ? " - Limited protection mode" : ""}
+                          {candidate.safetyLabel ? ` - ${candidate.safetyLabel}` : ""}
                         </span>
                       </span>
                       {candidate.providerId === selectedProvider ? <span className="text-xs text-[var(--accent)]">Current</span> : null}

@@ -12,6 +12,7 @@ const createProvider = (
     priority: number;
     supportsMovie?: boolean;
     supportsTv?: boolean;
+    compatibilityMode?: boolean;
     requiresRelaxedSandbox?: boolean;
     notes?: string;
   },
@@ -20,10 +21,11 @@ const createProvider = (
   name,
   baseUrl,
   enabled: options.enabled ?? true,
-  safety: options.safety ?? "unknown",
+  safety: options.safety ?? "compatibility",
   priority: options.priority,
   supportsMovie: options.supportsMovie ?? true,
   supportsTv: options.supportsTv ?? true,
+  compatibilityMode: options.compatibilityMode ?? options.requiresRelaxedSandbox ?? true,
   requiresRelaxedSandbox: options.requiresRelaxedSandbox,
   notes: options.notes,
   capabilities,
@@ -51,7 +53,7 @@ const standardCapabilities = {
   casting: false,
 };
 
-const UNSAFE_POPUP_AD_NOTES = "Blocked because this provider showed unsafe popup ads.";
+const REPORTED_PROVIDER_NOTES = "Reported by users for popup or unsafe ad behavior. Use a trusted ad blocker.";
 
 const appendVidKingPlaybackOptions = (url: string, options?: PlaybackOptions) => {
   if (!options) {
@@ -69,28 +71,29 @@ const appendVidKingPlaybackOptions = (url: string, options?: PlaybackOptions) =>
 
 export const GRUBX_PROVIDERS = [
   createProvider("vidfast", "vidfast.pro", "https://vidfast.pro", standardCapabilities, {
-    enabled: false,
-    safety: "blocked",
+    enabled: true,
+    safety: "reported",
     priority: 90,
-    requiresRelaxedSandbox: false,
-    notes: UNSAFE_POPUP_AD_NOTES,
+    compatibilityMode: true,
+    notes: REPORTED_PROVIDER_NOTES,
   }),
   createProvider("vidfast-pro", "vidfast.pro", "https://vidfast.pro", standardCapabilities, {
-    enabled: false,
-    safety: "blocked",
+    enabled: true,
+    safety: "reported",
     priority: 91,
-    requiresRelaxedSandbox: false,
-    notes: UNSAFE_POPUP_AD_NOTES,
+    compatibilityMode: true,
+    notes: REPORTED_PROVIDER_NOTES,
   }),
   {
     id: "vidking",
     name: "www.vidking.net",
     baseUrl: "https://www.vidking.net/embed",
     enabled: true,
-    safety: "unknown",
+    safety: "standard",
     priority: 1,
     supportsMovie: true,
     supportsTv: true,
+    compatibilityMode: true,
     requiresRelaxedSandbox: false,
     capabilities: {
       subtitles: true,
@@ -110,28 +113,28 @@ export const GRUBX_PROVIDERS = [
       );
     },
   },
-  createProvider("vidfast-in", "vidfast.in", "https://vidfast.in", standardCapabilities, { safety: "unknown", priority: 3 }),
-  createProvider("vidfast-io", "vidfast.io", "https://vidfast.io", standardCapabilities, { safety: "unknown", priority: 4 }),
-  createProvider("vidfast-me", "vidfast.me", "https://vidfast.me", standardCapabilities, { safety: "unknown", priority: 5 }),
-  createProvider("vidfast-net", "vidfast.net", "https://vidfast.net", standardCapabilities, { safety: "unknown", priority: 6 }),
-  createProvider("vidfast-pm", "vidfast.pm", "https://vidfast.pm", standardCapabilities, { safety: "unknown", priority: 7 }),
-  createProvider("vidfast-xyz", "vidfast.xyz", "https://vidfast.xyz", standardCapabilities, { safety: "unknown", priority: 8 }),
+  createProvider("vidfast-in", "vidfast.in", "https://vidfast.in", standardCapabilities, { safety: "compatibility", priority: 3 }),
+  createProvider("vidfast-io", "vidfast.io", "https://vidfast.io", standardCapabilities, { safety: "compatibility", priority: 4 }),
+  createProvider("vidfast-me", "vidfast.me", "https://vidfast.me", standardCapabilities, { safety: "compatibility", priority: 5 }),
+  createProvider("vidfast-net", "vidfast.net", "https://vidfast.net", standardCapabilities, { safety: "compatibility", priority: 6 }),
+  createProvider("vidfast-pm", "vidfast.pm", "https://vidfast.pm", standardCapabilities, { safety: "compatibility", priority: 7 }),
+  createProvider("vidfast-xyz", "vidfast.xyz", "https://vidfast.xyz", standardCapabilities, { safety: "compatibility", priority: 8 }),
   createProvider("vidcore", "vidcore.net", "https://vidcore.net", standardCapabilities, {
-    enabled: false,
-    safety: "blocked",
+    enabled: true,
+    safety: "reported",
     priority: 92,
-    requiresRelaxedSandbox: false,
-    notes: UNSAFE_POPUP_AD_NOTES,
+    compatibilityMode: true,
+    notes: REPORTED_PROVIDER_NOTES,
   }),
-  createProvider("vidlink", "vidlink.pro", "https://vidlink.pro", standardCapabilities, { safety: "unknown", priority: 10 }),
-  createProvider("vidfun", "vidfun.pro", "https://vidfun.pro", standardCapabilities, { safety: "unknown", priority: 11 }),
-  createProvider("vidrock", "vidrock.net", "https://vidrock.net", standardCapabilities, { safety: "unknown", priority: 12 }),
+  createProvider("vidlink", "vidlink.pro", "https://vidlink.pro", standardCapabilities, { safety: "compatibility", priority: 10 }),
+  createProvider("vidfun", "vidfun.pro", "https://vidfun.pro", standardCapabilities, { safety: "compatibility", priority: 11 }),
+  createProvider("vidrock", "vidrock.net", "https://vidrock.net", standardCapabilities, { safety: "compatibility", priority: 12 }),
   createProvider("videasy", "player.videasy.net", "https://player.videasy.net", {
     subtitles: true,
     quality: true,
     casting: true,
-  }, { safety: "unknown", priority: 13 }),
-  createProvider("zxcstream", "zxcstream.xyz", "https://zxcstream.xyz", standardCapabilities, { safety: "unknown", priority: 14 }),
+  }, { safety: "compatibility", priority: 13 }),
+  createProvider("zxcstream", "zxcstream.xyz", "https://zxcstream.xyz", standardCapabilities, { safety: "compatibility", priority: 14 }),
 ] satisfies GrubXProvider[];
 
 export const DEFAULT_GRUBX_PROVIDER: GrubXProviderId = "vidking";
@@ -143,21 +146,14 @@ export const getGrubXProvider = (providerId: string) => {
 
 export const getProviderById = getGrubXProvider;
 
-export function isProviderAllowed(providerId: string, options?: { allowLimitedProtectionProviders?: boolean }) {
+export function isProviderAllowed(providerId: string, _options?: { allowLimitedProtectionProviders?: boolean }) {
   const provider = getProviderById(providerId);
-  return Boolean(
-    provider &&
-      provider.enabled &&
-      provider.safety !== "blocked" &&
-      (!provider.requiresRelaxedSandbox || options?.allowLimitedProtectionProviders === true),
-  );
+  return Boolean(provider && provider.enabled);
 }
 
-export function getEnabledProviders(mediaType: "movie" | "tv", options?: { allowLimitedProtectionProviders?: boolean }) {
+export function getEnabledProviders(mediaType: "movie" | "tv", _options?: { allowLimitedProtectionProviders?: boolean }) {
   return GRUBX_PROVIDERS
     .filter((provider) => provider.enabled)
-    .filter((provider) => provider.safety !== "blocked")
-    .filter((provider) => !provider.requiresRelaxedSandbox || options?.allowLimitedProtectionProviders === true)
     .filter((provider) => (mediaType === "movie" ? provider.supportsMovie : provider.supportsTv))
     .sort((a, b) => a.priority - b.priority);
 }
@@ -170,12 +166,11 @@ export function scoreServerCandidate(input: {
   previousFailure?: boolean;
   localReports?: number;
 }) {
-  if (input.safety === "blocked") return -9999;
-
   let score = 100;
 
-  if (input.safety === "safe") score += 30;
-  if (input.safety === "unknown") score += 5;
+  if (input.safety === "standard") score += 18;
+  if (input.safety === "compatibility") score += 6;
+  if (input.safety === "reported") score -= 12;
 
   score += Math.max(0, 20 - input.priority * 2);
 

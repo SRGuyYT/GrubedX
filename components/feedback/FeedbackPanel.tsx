@@ -27,6 +27,8 @@ const areas = [
   { value: "design-ui", label: "Design/UI" },
   { value: "account-data", label: "Account/Data" },
   { value: "external-media", label: "External Media" },
+  { value: "safety", label: "Safety" },
+  { value: "contact", label: "Contact" },
   { value: "other", label: "Other" },
 ];
 

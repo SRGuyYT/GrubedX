@@ -2,7 +2,7 @@ export type GrubXMediaType = "movie" | "tv" | "anime";
 
 export type GrubXProviderId = string;
 
-export type GrubXProviderSafety = "safe" | "unknown" | "blocked";
+export type GrubXProviderSafety = "standard" | "compatibility" | "reported";
 
 export type PlaybackOptions = {
   theme?: string;
@@ -33,6 +33,7 @@ export type GrubXProvider = {
   priority: number;
   supportsMovie: boolean;
   supportsTv: boolean;
+  compatibilityMode?: boolean;
   requiresRelaxedSandbox?: boolean;
   notes?: string;
   movie(id: string, options?: PlaybackOptions): string;
@@ -52,7 +53,9 @@ export type GrubXServerCandidate = {
   latencyMs: number | null;
   score: number;
   status: "untested" | "testing" | "ready" | "failed" | "blocked";
+  compatibilityMode?: boolean;
   requiresRelaxedSandbox?: boolean;
+  safetyLabel?: "Standard" | "Compatibility" | "Reported by users";
   reason?: string;
 };
 
