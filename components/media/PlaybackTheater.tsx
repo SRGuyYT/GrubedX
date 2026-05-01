@@ -363,6 +363,7 @@ export function PlaybackTheater({
     () => candidates.find((candidate) => candidate.providerId === selectedProvider) ?? null,
     [candidates, selectedProvider],
   );
+  const iframeSandbox = settings.strictIframeSandbox ? STRICT_IFRAME_SANDBOX : undefined;
 
   const readyCandidates = useMemo(
     () => candidates.filter((candidate) => candidate.status === "ready"),
@@ -852,6 +853,11 @@ export function PlaybackTheater({
                   Limited protection mode
                 </span>
               ) : null}
+              {!settings.strictIframeSandbox ? (
+                <span className="inline-flex min-h-11 shrink-0 items-center rounded-full border border-red-300/25 bg-red-500/12 px-4 text-xs font-semibold text-red-100">
+                  Sandbox off
+                </span>
+              ) : null}
               <button
                 type="button"
                 onClick={() => setServerSheetOpen(true)}
@@ -1052,7 +1058,7 @@ export function PlaybackTheater({
                 className={cn("absolute inset-0 h-full w-full border-0", settings.blockPopups && !controlsUnlocked ? "pointer-events-none" : "")}
                 allow="fullscreen; picture-in-picture; encrypted-media"
                 referrerPolicy="no-referrer"
-                sandbox={STRICT_IFRAME_SANDBOX}
+                sandbox={iframeSandbox}
                 allowFullScreen
                 onLoad={() => {
                   markActiveProviderSuccess();

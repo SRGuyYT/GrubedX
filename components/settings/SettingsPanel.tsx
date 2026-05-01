@@ -242,6 +242,22 @@ export function SettingsPanel() {
               disabled={isPending}
             />
           </SettingRow>
+          <SettingRow
+            title="Strict iframe sandbox"
+            description="Keep this on for the safest playback. Turn it off only if a provider says sandboxing must be disabled."
+          >
+            <ToggleSwitch
+              checked={settings.strictIframeSandbox}
+              onChange={(checked) =>
+                setSetting(
+                  "strictIframeSandbox",
+                  checked,
+                  checked ? "Player sandboxing enabled." : "Player sandboxing disabled for playback.",
+                )
+              }
+              disabled={isPending}
+            />
+          </SettingRow>
         </Section>
 
         <Section icon={Film} title="Playback" description="Player defaults, recommendations, and embed quality.">
