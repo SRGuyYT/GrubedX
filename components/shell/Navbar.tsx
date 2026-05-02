@@ -50,9 +50,13 @@ const isActivePath = (pathname: string, href: string) => (href === "/" ? pathnam
 function NavButton({
   item,
   pathname,
+  showLabels,
+  showIcons,
 }: {
   item: NavItem;
   pathname: string;
+  showLabels: boolean;
+  showIcons: boolean;
 }) {
   const Icon = item.icon;
   const active = isActivePath(pathname, item.href);
@@ -69,22 +73,33 @@ function NavButton({
           : "border-transparent text-[var(--muted)] hover:bg-white/8 hover:text-white active:scale-[0.98]",
       )}
     >
-      <Icon className="size-4 shrink-0 text-current" />
-      <span className="inline whitespace-nowrap md:hidden lg:inline">{item.label}</span>
+      {showIcons ? <Icon className="size-4 shrink-0 text-current" /> : null}
+      {showLabels ? <span className="inline whitespace-nowrap md:hidden lg:inline">{item.label}</span> : null}
     </Link>
   );
 }
 
-function BrandBlock() {
+function BrandBlock({
+  showLogo,
+  logoSize,
+  name,
+}: {
+  showLogo: boolean;
+  logoSize: "small" | "medium" | "large";
+  name: string;
+}) {
+  const sizeClass = logoSize === "small" ? "size-8" : logoSize === "large" ? "size-11" : "size-9";
   return (
     <Link
       href="/"
       className="flex items-center gap-3 rounded-full border border-white/10 bg-black/45 px-3 py-2 transition hover:border-white/18 hover:bg-white/8"
     >
-      <div className="relative size-9 overflow-hidden rounded-full border border-white/10 bg-black shadow-[0_10px_28px_rgba(0,0,0,0.32)]">
-        <Image src="/64x64.png" alt="GrubX" fill sizes="36px" className="object-cover" priority />
-      </div>
-      <span className="hidden text-sm font-semibold text-white sm:inline">GrubX</span>
+      {showLogo ? (
+        <div className={cn("relative overflow-hidden rounded-full border border-white/10 bg-black shadow-[0_10px_28px_rgba(0,0,0,0.32)]", sizeClass)}>
+          <Image src="/64x64.png" alt={name} fill sizes="44px" className="object-cover" priority />
+        </div>
+      ) : null}
+      <span className="hidden text-sm font-semibold text-white sm:inline">{name}</span>
     </Link>
   );
 }
@@ -135,11 +150,11 @@ export function Navbar() {
     <>
       <header className="site-navbar fixed inset-x-0 top-0 z-50 pointer-events-none">
         <div className="page-shell flex items-center justify-between gap-3 py-4 pointer-events-auto">
-          <BrandBlock />
+          <BrandBlock showLogo={settings.showLogo} logoSize={settings.logoSize} name={settings.websiteName} />
 
           <nav className="liquid-glass hidden max-w-[calc(100vw-18rem)] items-center gap-1 overflow-x-auto rounded-full p-1.5 md:flex">
             {nav.map((item) => (
-              <NavButton key={item.href} item={item} pathname={pathname} />
+              <NavButton key={item.href} item={item} pathname={pathname} showLabels={settings.showNavLabels} showIcons={settings.showNavIcons} />
             ))}
           </nav>
 
@@ -164,7 +179,7 @@ export function Navbar() {
         <div className="pointer-events-auto fixed inset-x-0 bottom-0 z-50 border-t border-white/10 bg-black/76 px-2 pb-[calc(0.55rem+env(safe-area-inset-bottom))] pt-2 backdrop-blur-2xl md:hidden">
           <nav className="flex w-full gap-1 overflow-x-auto rounded-full border border-white/10 bg-white/6 p-1">
             {nav.map((item) => (
-              <NavButton key={item.href} item={item} pathname={pathname} />
+              <NavButton key={item.href} item={item} pathname={pathname} showLabels={settings.showNavLabels} showIcons={settings.showNavIcons} />
             ))}
           </nav>
         </div>

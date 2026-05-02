@@ -62,16 +62,32 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     root.dataset.blur = settings.blurStrength;
     root.dataset.largeText = settings.largeText ? "true" : "false";
     root.dataset.audioProfile = settings.audioProfile;
+    root.dataset.backgroundStyle = settings.backgroundStyle;
+    root.dataset.posterShape = settings.posterShape;
+    root.dataset.cardSize = settings.cardSize;
+    root.dataset.highContrast = settings.highContrastMode ? "true" : "false";
 
     root.style.setProperty(
       "--app-blur",
       settings.blurStrength === "soft" ? "10px" : settings.blurStrength === "intense" ? "24px" : "16px",
     );
-    root.style.setProperty("--card-gap", settings.compactMode || settings.cardDensity === "compact" ? "1rem" : "1.5rem");
-    root.style.setProperty("--content-gap", settings.compactMode || settings.cardDensity === "compact" ? "1.5rem" : "2.1rem");
-    root.style.setProperty("--text-scale", settings.largeText ? "1.05" : "1");
+    const compactSpacing = settings.compactMode || settings.customCardDensity === "compact" || settings.cardDensity === "compact";
+    const spaciousSpacing = settings.customCardDensity === "spacious" || settings.rowSpacing === "spacious";
+    root.style.setProperty("--card-gap", compactSpacing ? "1rem" : spaciousSpacing ? "2rem" : "1.5rem");
+    root.style.setProperty("--content-gap", compactSpacing ? "1.5rem" : spaciousSpacing ? "2.75rem" : "2.1rem");
+    root.style.setProperty("--text-scale", settings.textSize === "small" ? "0.95" : settings.textSize === "large" || settings.largeText ? "1.08" : "1");
+    root.style.setProperty("--panel-opacity", String(settings.panelOpacity));
+    root.style.setProperty("--border-strength", String(settings.borderStrength));
+    root.style.setProperty("--shadow-strength", String(settings.shadowStrength));
+    root.style.setProperty("--poster-radius", settings.posterShape === "sharp" ? "0.25rem" : settings.posterShape === "extra-rounded" ? "1.3rem" : "0.82rem");
+    root.style.setProperty("--card-radius", settings.posterShape === "sharp" ? "0.55rem" : settings.posterShape === "extra-rounded" ? "1.6rem" : "1.05rem");
+    root.style.setProperty("--row-card-width", settings.cardSize === "small" ? "166px" : settings.cardSize === "large" ? "226px" : "204px");
 
-    if (settings.accentTone === "electric") {
+    const customAccent = /^#[0-9a-f]{6}$/i.test(settings.accentColor) ? settings.accentColor : "";
+    if (customAccent) {
+      root.style.setProperty("--accent", customAccent);
+      root.style.setProperty("--accent-soft", `${customAccent}2b`);
+    } else if (settings.accentTone === "electric") {
       root.style.setProperty("--accent", "#d8e4ff");
       root.style.setProperty("--accent-soft", "rgba(216, 228, 255, 0.16)");
     } else if (settings.accentTone === "aurora") {

@@ -19,7 +19,7 @@ export function MovieCard({
   const { settings } = useSettingsContext();
   const imageWidth =
     settings.posterQuality === "high" ? "w500" : settings.posterQuality === "data-saver" || settings.dataSaver ? "w342" : "w500";
-  const compact = settings.cardDensity === "compact";
+  const compact = settings.cardDensity === "compact" || settings.customCardDensity === "compact";
 
   return (
     <article className="group relative flex h-full w-full flex-col transition-transform duration-300 hover:-translate-y-1 active:scale-[0.985]">
@@ -29,11 +29,11 @@ export function MovieCard({
         prefetch={settings.prefetchRoutes && !settings.lowBandwidthMode}
         onClick={() => trackClickedItem(mediaItemToRecommendationItem(media))}
         className={cn(
-          "relative flex h-full flex-col overflow-hidden rounded-[1.05rem] border border-white/8 bg-white/[0.035]",
+          "relative flex h-full flex-col overflow-hidden rounded-[var(--card-radius)] border border-white/8 bg-white/[var(--panel-opacity,0.035)]",
           compact ? "p-2.5" : "p-3",
         )}
       >
-        <div className="relative block aspect-[2/3] w-full overflow-hidden rounded-[0.82rem] border border-white/8 bg-black">
+        <div className="relative block aspect-[2/3] w-full overflow-hidden rounded-[var(--poster-radius)] border border-white/8 bg-black">
           <Image
             src={
               media.posterPath
@@ -66,6 +66,7 @@ export function MovieCard({
         </div>
 
         <div className={cn("flex flex-1 flex-col px-0.5 pb-0.5", compact ? "gap-2.5 pt-3" : "gap-3 pt-3.5")}>
+          {settings.showCardMetadata ? (
           <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--muted)]">
             {settings.showRatings && media.rating ? (
               <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-black/28 px-2.5 py-1">
@@ -79,12 +80,15 @@ export function MovieCard({
               </span>
             ) : null}
           </div>
+          ) : null}
 
           <div className="space-y-2">
             <h3 className="line-clamp-2 text-base font-semibold leading-tight text-white">{media.title}</h3>
+            {settings.showCardDescriptions ? (
             <p className="line-clamp-3 text-sm leading-5 text-[var(--muted)]">
               {media.overview || "No overview available."}
             </p>
+            ) : null}
           </div>
         </div>
       </Link>

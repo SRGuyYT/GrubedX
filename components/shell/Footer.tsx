@@ -1,6 +1,11 @@
+"use client";
+
 import Link from "next/link";
 
+import { useSettingsContext } from "@/context/SettingsContext";
+
 export function Footer() {
+  const { settings } = useSettingsContext();
   const legalLinks = [
     { href: "/safety", label: "Safety" },
     { href: "/terms", label: "Terms" },
@@ -13,7 +18,7 @@ export function Footer() {
       <div className="grid gap-4 rounded-[1rem] border border-white/8 bg-white/[0.03] px-5 py-5 md:grid-cols-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.28em]">Local Queue</p>
-          <p className="mt-2 leading-6">Progress, watchlist, and preferences stay on this device.</p>
+          <p className="mt-2 leading-6">{settings.footerText}</p>
         </div>
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.28em]">Quick Relaunch</p>
@@ -21,7 +26,7 @@ export function Footer() {
         </div>
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.28em]">Cinema Mode</p>
-          <p className="mt-2 leading-6">A quiet interface built around artwork, playback, and discovery.</p>
+          <p className="mt-2 leading-6">{settings.websiteSubtitle}</p>
         </div>
       </div>
       <nav className="mt-5 flex flex-wrap gap-3 rounded-[1rem] border border-white/8 bg-white/[0.03] px-5 py-4">

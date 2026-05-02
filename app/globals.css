@@ -15,6 +15,12 @@
   --accent-alt: rgba(255, 255, 255, 0.08);
   --success: #8ae7bd;
   --app-blur: 16px;
+  --panel-opacity: 0.035;
+  --border-strength: 0.1;
+  --shadow-strength: 0.32;
+  --poster-radius: 0.82rem;
+  --card-radius: 1.05rem;
+  --row-card-width: 204px;
   --card-gap: 1rem;
   --content-gap: 1.6rem;
   --text-scale: 1;
@@ -53,6 +59,25 @@ body {
   min-height: 100%;
   background: transparent;
   color: var(--foreground);
+}
+
+html[data-background-style="solid"] body {
+  background: #030304;
+}
+
+html[data-background-style="minimal"] body {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.018), transparent 28%);
+}
+
+html[data-background-style="glass"] body {
+  background:
+    radial-gradient(circle at 12% 0%, rgba(255, 255, 255, 0.08), transparent 34%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent 38%);
+}
+
+html[data-high-contrast="true"] {
+  --muted: #d7d2ca;
+  --line: rgba(255, 255, 255, 0.18);
 }
 
 body {

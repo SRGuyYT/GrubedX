@@ -47,7 +47,7 @@ export function MediaRow({
 
       <div ref={rowRef} className="scrollbar-hidden -mx-[var(--shell-padding)] flex gap-[var(--card-gap)] overflow-x-auto px-[var(--shell-padding)] pb-5 pt-1">
         {items.map((item) => (
-          <div key={`${item.mediaType}-${item.id}`} className="w-[156px] shrink-0 sm:w-[176px] md:w-[190px] xl:w-[204px]">
+          <div key={`${item.mediaType}-${item.id}`} className="w-[156px] shrink-0 sm:w-[176px] md:w-[190px] xl:w-[var(--row-card-width)]">
             <MovieCard media={item} />
           </div>
         ))}

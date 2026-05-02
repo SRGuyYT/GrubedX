@@ -8,6 +8,9 @@ import {
   Database,
   Download,
   Film,
+  Globe2,
+  Home,
+  LayoutGrid,
   MonitorPlay,
   Navigation,
   Palette,
@@ -23,10 +26,13 @@ import {
 import { toast } from "sonner";
 
 import { LoadingState } from "@/components/feedback/LoadingState";
+import { SelectControl } from "@/components/settings/SelectControl";
+import { SliderControl } from "@/components/settings/SliderControl";
+import { TextInputControl } from "@/components/settings/TextInputControl";
 import { ToggleSwitch } from "@/components/settings/ToggleSwitch";
 import { useSettingsContext } from "@/context/SettingsContext";
 import { GRUBX_PROVIDERS } from "@/lib/grubx/providers";
-import { DEFAULT_FEATURE_TOGGLES, DEFAULT_SETTINGS } from "@/lib/settings";
+import { DEFAULT_FEATURE_TOGGLES, DEFAULT_SETTINGS, PROGRESS_STORAGE_KEY, WATCHLIST_STORAGE_KEY } from "@/lib/settings";
 import {
   getAgeGateStatus,
   getRiskConsentAcceptedAt,
@@ -36,6 +42,16 @@ import {
 } from "@/lib/grubx/consent";
 import { queryKeys } from "@/lib/queryKeys";
 import type { CustomProviderSettings, Settings } from "@/types/settings";
+
+const presets: Array<{ value: Settings["websitePreset"]; label: string; patch: Partial<Settings> }> = [
+  { value: "cinematic-console", label: "Cinematic Console", patch: { backgroundStyle: "cinematic-gradient", cardSize: "medium", customCardDensity: "comfortable", navStyle: "floating", playerLayout: "fullscreen-overlay", themePreference: "dark", amoledMode: false, compactMode: false } },
+  { value: "minimal", label: "Minimal", patch: { backgroundStyle: "minimal", cardSize: "medium", customCardDensity: "compact", navStyle: "compact", panelOpacity: 0.02, shadowStrength: 0.16 } },
+  { value: "amoled", label: "AMOLED", patch: { backgroundStyle: "solid", themePreference: "amoled", amoledMode: true, panelOpacity: 0.025, shadowStrength: 0.18 } },
+  { value: "glass", label: "Glass", patch: { backgroundStyle: "glass", blurStrength: "intense", panelOpacity: 0.06, borderStrength: 0.16, shadowStrength: 0.42 } },
+  { value: "compact", label: "Compact", patch: { compactMode: true, cardSize: "small", customCardDensity: "compact", rowSpacing: "compact", navStyle: "compact" } },
+  { value: "big-screen-tv", label: "Big Screen / TV", patch: { cardSize: "large", customCardDensity: "spacious", rowSpacing: "spacious", textSize: "large", navStyle: "top-bar", playerLayout: "fullscreen-overlay" } },
+  { value: "mobile-friendly", label: "Mobile Friendly", patch: { cardSize: "small", customCardDensity: "comfortable", mobileNavStyle: "bottom-bar", textSize: "normal", playerLayout: "compact" } },
+];
 
 function Section({
   icon: Icon,
@@ -175,6 +191,13 @@ export function SettingsPanel() {
       },
       enabled ? "Feature enabled." : "Feature disabled.",
     );
+  };
+
+  const applyPreset = (preset: (typeof presets)[number]) => {
+    startTransition(async () => {
+      await updateSettings({ websitePreset: preset.value, ...preset.patch });
+      toast.success(`${preset.label} preset applied.`);
+    });
   };
 
   const resetProviderPreferences = () => {
@@ -349,6 +372,165 @@ export function SettingsPanel() {
         </div>
       </div>
 
+      <Section icon={SlidersHorizontal} title="Website Presets" description="Start from a tuned layout, then keep customizing manually.">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {presets.map((preset) => (
+            <button
+              key={preset.value}
+              type="button"
+              onClick={() => applyPreset(preset)}
+              className={[
+                "min-h-11 rounded-[1rem] border px-4 py-3 text-left text-sm font-semibold transition active:scale-[0.98]",
+                settings.websitePreset === preset.value
+                  ? "border-[var(--accent)] bg-[var(--accent-soft)] text-white"
+                  : "border-white/10 bg-white/6 text-[var(--muted)] hover:text-white",
+              ].join(" ")}
+            >
+              {preset.label}
+            </button>
+          ))}
+        </div>
+      </Section>
+
+      <div className="grid gap-8 xl:grid-cols-2">
+        <Section icon={Globe2} title="Branding" description="Customize the public labels and copy without changing app routes.">
+          <SettingRow title="Website name" description="Shown in the navbar brand.">
+            <TextInputControl value={settings.websiteName} onChange={(value) => setSetting("websiteName", value, "Website name updated.")} label="Website name" />
+          </SettingRow>
+          <SettingRow title="Website subtitle" description="Used in supporting copy and exports.">
+            <TextInputControl value={settings.websiteSubtitle} onChange={(value) => setSetting("websiteSubtitle", value, "Website subtitle updated.")} label="Website subtitle" />
+          </SettingRow>
+          <SettingRow title="Show logo" description="Show or hide the GrubX icon in the navbar.">
+            <ToggleSwitch checked={settings.showLogo} onChange={(checked) => setSetting("showLogo", checked, "Logo visibility updated.")} disabled={isPending} />
+          </SettingRow>
+          <SettingRow title="Logo size" description="Adjust the brand icon scale.">
+            <SelectControl
+              value={settings.logoSize}
+              options={[{ value: "small", label: "Small" }, { value: "medium", label: "Medium" }, { value: "large", label: "Large" }]}
+              onChange={(value) => setSetting("logoSize", value, "Logo size updated.")}
+            />
+          </SettingRow>
+          <SettingRow title="Home hero title" description="Custom copy for the home hero.">
+            <TextInputControl value={settings.homeHeroTitle} onChange={(value) => setSetting("homeHeroTitle", value, "Hero title updated.")} label="Home hero title" />
+          </SettingRow>
+          <SettingRow title="Home hero subtitle" description="Custom supporting copy for the home hero.">
+            <TextInputControl value={settings.homeHeroSubtitle} onChange={(value) => setSetting("homeHeroSubtitle", value, "Hero subtitle updated.")} label="Home hero subtitle" />
+          </SettingRow>
+          <SettingRow title="Footer text" description="Customize the primary footer message.">
+            <TextInputControl value={settings.footerText} onChange={(value) => setSetting("footerText", value, "Footer text updated.")} label="Footer text" />
+          </SettingRow>
+          <SettingRow title="AI Server label" description="Customize the external AI link label.">
+            <TextInputControl value={settings.aiServerLabel} onChange={(value) => setSetting("aiServerLabel", value, "AI label updated.")} label="AI Server label" />
+          </SettingRow>
+          <SettingRow title="AI Server URL" description="Use an HTTPS URL for the AI Server link.">
+            <TextInputControl type="url" value={settings.aiServerUrl} onChange={(value) => setSetting("aiServerUrl", value, "AI Server URL updated.")} label="AI Server URL" />
+          </SettingRow>
+        </Section>
+
+        <Section icon={Palette} title="Colors & Theme" description="Fine-tune color, contrast, and glass intensity.">
+          <SettingRow title="Theme mode" description="Choose system, dark, or AMOLED behavior.">
+            <SelectControl
+              value={settings.themePreference}
+              options={[{ value: "system", label: "System" }, { value: "dark", label: "Dark" }, { value: "amoled", label: "AMOLED" }]}
+              onChange={(value) => {
+                void updateSettings({ themePreference: value, uiTheme: "dark", amoledMode: value === "amoled" });
+                toast.success("Theme mode updated.");
+              }}
+            />
+          </SettingRow>
+          <SettingRow title="Accent color" description="Pick the active state color.">
+            <TextInputControl type="color" value={settings.accentColor} onChange={(value) => setSetting("accentColor", value, "Accent color updated.")} label="Accent color" />
+          </SettingRow>
+          <SettingRow title="Background style" description="Choose the page backdrop treatment.">
+            <SelectControl
+              value={settings.backgroundStyle}
+              options={[{ value: "solid", label: "Solid" }, { value: "cinematic-gradient", label: "Cinematic gradient" }, { value: "glass", label: "Glass" }, { value: "minimal", label: "Minimal" }]}
+              onChange={(value) => setSetting("backgroundStyle", value, "Background style updated.")}
+            />
+          </SettingRow>
+          <SettingRow title="Panel opacity" description="Adjust panel fill intensity.">
+            <SliderControl value={Math.round(settings.panelOpacity * 100)} min={0} max={20} onChange={(value) => setSetting("panelOpacity", value / 100, "Panel opacity updated.")} suffix="%" />
+          </SettingRow>
+          <SettingRow title="Border strength" description="Adjust panel border visibility.">
+            <SliderControl value={Math.round(settings.borderStrength * 100)} min={0} max={35} onChange={(value) => setSetting("borderStrength", value / 100, "Border strength updated.")} suffix="%" />
+          </SettingRow>
+          <SettingRow title="Shadow strength" description="Adjust elevated shadow intensity.">
+            <SliderControl value={Math.round(settings.shadowStrength * 100)} min={0} max={80} onChange={(value) => setSetting("shadowStrength", value / 100, "Shadow strength updated.")} suffix="%" />
+          </SettingRow>
+          <SettingRow title="Text size" description="Scale app text without breaking layout.">
+            <SelectControl value={settings.textSize} options={[{ value: "small", label: "Small" }, { value: "normal", label: "Normal" }, { value: "large", label: "Large" }]} onChange={(value) => setSetting("textSize", value, "Text size updated.")} />
+          </SettingRow>
+          <SettingRow title="High contrast mode" description="Raise muted text contrast.">
+            <ToggleSwitch checked={settings.highContrastMode} onChange={(checked) => setSetting("highContrastMode", checked, "High contrast updated.")} disabled={isPending} />
+          </SettingRow>
+          <SettingRow title="Reduce motion" description="Reduce animation and hover motion.">
+            <ToggleSwitch checked={!settings.enableAnimations} onChange={(checked) => setSetting("enableAnimations", !checked, "Motion preference updated.")} disabled={isPending} />
+          </SettingRow>
+        </Section>
+      </div>
+
+      <div className="grid gap-8 xl:grid-cols-2">
+        <Section icon={LayoutGrid} title="Layout" description="Control card sizing, density, poster shape, and visible metadata.">
+          <SettingRow title="Card size" description="Scale posters in rows and grids.">
+            <SelectControl value={settings.cardSize} options={[{ value: "small", label: "Small" }, { value: "medium", label: "Medium" }, { value: "large", label: "Large" }]} onChange={(value) => setSetting("cardSize", value, "Card size updated.")} />
+          </SettingRow>
+          <SettingRow title="Card density" description="Choose compact, comfortable, or spacious cards.">
+            <SelectControl value={settings.customCardDensity} options={[{ value: "compact", label: "Compact" }, { value: "comfortable", label: "Comfortable" }, { value: "spacious", label: "Spacious" }]} onChange={(value) => setSetting("customCardDensity", value, "Card density updated.")} />
+          </SettingRow>
+          <SettingRow title="Poster shape" description="Control card corner radius.">
+            <SelectControl value={settings.posterShape} options={[{ value: "sharp", label: "Sharp" }, { value: "rounded", label: "Rounded" }, { value: "extra-rounded", label: "Extra rounded" }]} onChange={(value) => setSetting("posterShape", value, "Poster shape updated.")} />
+          </SettingRow>
+          <SettingRow title="Row spacing" description="Adjust section breathing room.">
+            <SelectControl value={settings.rowSpacing} options={[{ value: "compact", label: "Compact" }, { value: "comfortable", label: "Comfortable" }, { value: "spacious", label: "Spacious" }]} onChange={(value) => setSetting("rowSpacing", value, "Row spacing updated.")} />
+          </SettingRow>
+          <SettingRow title="Grid columns" description="Pick a fixed catalog grid or keep auto.">
+            <SelectControl value={settings.gridColumns} options={[{ value: "auto", label: "Auto" }, { value: "2", label: "2" }, { value: "3", label: "3" }, { value: "4", label: "4" }, { value: "5", label: "5" }, { value: "6", label: "6" }]} onChange={(value) => setSetting("gridColumns", value, "Grid columns updated.")} />
+          </SettingRow>
+          <SettingRow title="Show metadata on cards" description="Show rating/year pills.">
+            <ToggleSwitch checked={settings.showCardMetadata} onChange={(checked) => setSetting("showCardMetadata", checked, "Card metadata updated.")} disabled={isPending} />
+          </SettingRow>
+          <SettingRow title="Show ratings" description="Show rating values on cards.">
+            <ToggleSwitch checked={settings.showRatings} onChange={(checked) => setSetting("showRatings", checked, "Ratings updated.")} disabled={isPending} />
+          </SettingRow>
+          <SettingRow title="Show release year" description="Show years on cards.">
+            <ToggleSwitch checked={settings.showReleaseYear} onChange={(checked) => setSetting("showReleaseYear", checked, "Release years updated.")} disabled={isPending} />
+          </SettingRow>
+          <SettingRow title="Show descriptions" description="Show overview snippets under titles.">
+            <ToggleSwitch checked={settings.showCardDescriptions} onChange={(checked) => setSetting("showCardDescriptions", checked, "Descriptions updated.")} disabled={isPending} />
+          </SettingRow>
+        </Section>
+
+        <Section icon={Home} title="Home Page" description="Choose the home hero and shelf behavior.">
+          <SettingRow title="Show hero" description="Show or hide the full home hero.">
+            <ToggleSwitch checked={settings.showHomeHero} onChange={(checked) => setSetting("showHomeHero", checked, "Hero visibility updated.")} disabled={isPending} />
+          </SettingRow>
+          <SettingRow title="Hero style" description="Choose full bleed, compact, or poster-focused.">
+            <SelectControl value={settings.heroStyle} options={[{ value: "full-bleed", label: "Full bleed" }, { value: "compact", label: "Compact" }, { value: "poster-focused", label: "Poster focused" }]} onChange={(value) => setSetting("heroStyle", value, "Hero style updated.")} />
+          </SettingRow>
+          <SettingRow title="Auto-rotate hero" description="Rotate featured hero items automatically.">
+            <ToggleSwitch checked={settings.autoRotateHero} onChange={(checked) => setSetting("autoRotateHero", checked, "Hero rotation updated.")} disabled={isPending} />
+          </SettingRow>
+          <SettingRow title="Hero rotation speed" description="Milliseconds between hero slides.">
+            <SliderControl value={settings.heroRotationSpeed} min={2500} max={20000} step={500} onChange={(value) => setSetting("heroRotationSpeed", value, "Hero speed updated.")} />
+          </SettingRow>
+          <SettingRow title="Show trending rows" description="Show content discovery shelves.">
+            <ToggleSwitch checked={settings.showTrendingRows} onChange={(checked) => setSetting("showTrendingRows", checked, "Trending rows updated.")} disabled={isPending} />
+          </SettingRow>
+          <SettingRow title="Show continue watching" description="Show local playback progress.">
+            <ToggleSwitch checked={settings.featureToggles.continueWatching} onChange={(checked) => setFeatureToggle("continueWatching", checked)} disabled={isPending} />
+          </SettingRow>
+          <SettingRow title="Show watchlist" description="Show locally saved titles.">
+            <ToggleSwitch checked={settings.featureToggles.watchlist} onChange={(checked) => setFeatureToggle("watchlist", checked)} disabled={isPending} />
+          </SettingRow>
+          <SettingRow title="Default home sections" description="Comma-separated section keys.">
+            <TextInputControl value={settings.defaultHomeSections.join(", ")} onChange={(value) => setSetting("defaultHomeSections", value.split(",").map((item) => item.trim()).filter(Boolean), "Home sections updated.")} />
+          </SettingRow>
+          <SettingRow title="Section order" description="Comma-separated order keys.">
+            <TextInputControl value={settings.homeSectionOrder.join(", ")} onChange={(value) => setSetting("homeSectionOrder", value.split(",").map((item) => item.trim()).filter(Boolean), "Section order updated.")} />
+          </SettingRow>
+        </Section>
+      </div>
+
       <Section
         icon={SlidersHorizontal}
         title="Feature Toggles"
@@ -482,6 +664,9 @@ export function SettingsPanel() {
               onChange={(value) => setSetting("spotifyEmbedSize", value, "Spotify embed size updated.")}
             />
           </SettingRow>
+          <SettingRow title="TikTok embed mode" description="Use embedded TikToks or link fallback mode.">
+            <SelectControl value={settings.tiktokEmbedMode} options={[{ value: "embed", label: "Embed" }, { value: "link-fallback", label: "Link fallback" }]} onChange={(value) => setSetting("tiktokEmbedMode", value, "TikTok embed mode updated.")} />
+          </SettingRow>
           <button
             type="button"
             onClick={() =>
@@ -602,6 +787,8 @@ export function SettingsPanel() {
               options={[
                 { value: "floating", label: "Floating" },
                 { value: "top-bar", label: "Top bar" },
+                { value: "sidebar", label: "Sidebar" },
+                { value: "bottom-mobile", label: "Bottom mobile bar" },
                 { value: "compact", label: "Compact" },
               ]}
               onChange={(value) => setSetting("navStyle", value, "Navigation style updated.")}
@@ -613,9 +800,19 @@ export function SettingsPanel() {
               options={[
                 { value: "bottom-bar", label: "Bottom bar" },
                 { value: "drawer", label: "Drawer" },
+                { value: "compact-top", label: "Compact top" },
               ]}
               onChange={(value) => setSetting("mobileNavStyle", value, "Mobile nav style updated.")}
             />
+          </SettingRow>
+          <SettingRow title="Show nav labels" description="Show or hide text labels beside icons.">
+            <ToggleSwitch checked={settings.showNavLabels} onChange={(checked) => setSetting("showNavLabels", checked, "Nav labels updated.")} disabled={isPending} />
+          </SettingRow>
+          <SettingRow title="Show nav icons" description="Show or hide icons beside labels.">
+            <ToggleSwitch checked={settings.showNavIcons} onChange={(checked) => setSetting("showNavIcons", checked, "Nav icons updated.")} disabled={isPending} />
+          </SettingRow>
+          <SettingRow title="Nav item order" description="Comma-separated route keys. Settings can never be fully hidden.">
+            <TextInputControl value={settings.navItemOrder.join(", ")} onChange={(value) => setSetting("navItemOrder", value.split(",").map((item) => item.trim()).filter(Boolean), "Nav order updated.")} />
           </SettingRow>
           <SettingRow title="Open AI Server" description="Choose whether AI opens in GrubX or a new tab.">
             <SelectSetting
@@ -636,6 +833,68 @@ export function SettingsPanel() {
                 </SettingRow>
               ))}
           </div>
+        </Section>
+      </div>
+
+      <div className="grid gap-8 xl:grid-cols-2">
+        <Section icon={Film} title="Movies & TV" description="Defaults for browsing, filtering, and result loading.">
+          <SettingRow title="Default media page" description="Choose where media shortcuts should start.">
+            <SelectControl value={settings.defaultMediaPage} options={[{ value: "home", label: "Home" }, { value: "movies", label: "Movies" }, { value: "tv", label: "TV" }]} onChange={(value) => setSetting("defaultMediaPage", value, "Default media page updated.")} />
+          </SettingRow>
+          <SettingRow title="Default sort" description="Preferred catalog sorting mode.">
+            <SelectControl value={settings.defaultSort} options={[{ value: "popular", label: "Popular" }, { value: "trending", label: "Trending" }, { value: "top-rated", label: "Top Rated" }, { value: "newest", label: "Newest" }]} onChange={(value) => setSetting("defaultSort", value, "Default sort updated.")} />
+          </SettingRow>
+          <SettingRow title="Default filters" description="Comma-separated filter labels or IDs.">
+            <TextInputControl value={settings.defaultFilters.join(", ")} onChange={(value) => setSetting("defaultFilters", value.split(",").map((item) => item.trim()).filter(Boolean), "Default filters updated.")} />
+          </SettingRow>
+          <SettingRow title="Show genre filters" description="Show genre controls on catalog pages.">
+            <ToggleSwitch checked={settings.showGenreFilters} onChange={(checked) => setSetting("showGenreFilters", checked, "Genre filters updated.")} disabled={isPending} />
+          </SettingRow>
+          <SettingRow title="Show rating filters" description="Show rating filters where available.">
+            <ToggleSwitch checked={settings.showRatingFilters} onChange={(checked) => setSetting("showRatingFilters", checked, "Rating filters updated.")} disabled={isPending} />
+          </SettingRow>
+          <SettingRow title="Show year filters" description="Show year range filters.">
+            <ToggleSwitch checked={settings.showYearFilters} onChange={(checked) => setSetting("showYearFilters", checked, "Year filters updated.")} disabled={isPending} />
+          </SettingRow>
+          <SettingRow title="Results per page" description="Preferred number of results per load.">
+            <SliderControl value={settings.resultsPerPage} min={8} max={60} step={4} onChange={(value) => setSetting("resultsPerPage", value, "Results per page updated.")} />
+          </SettingRow>
+          <SettingRow title="Infinite scroll" description="Load more results while scrolling.">
+            <ToggleSwitch checked={settings.infiniteScroll} onChange={(checked) => setSetting("infiniteScroll", checked, "Infinite scroll updated.")} disabled={isPending} />
+          </SettingRow>
+        </Section>
+
+        <Section icon={MonitorPlay} title="Player" description="Customize playback layout, controls, and provider actions.">
+          <SettingRow title="Player layout" description="Choose the player presentation.">
+            <SelectControl value={settings.playerLayout} options={[{ value: "fullscreen-overlay", label: "Fullscreen overlay" }, { value: "theater", label: "Theater" }, { value: "compact", label: "Compact" }]} onChange={(value) => setSetting("playerLayout", value, "Player layout updated.")} />
+          </SettingRow>
+          <SettingRow title="Auto-hide controls" description="Hide controls after a short idle period.">
+            <ToggleSwitch checked={settings.autoHidePlayerControls} onChange={(checked) => setSetting("autoHidePlayerControls", checked, "Auto-hide controls updated.")} disabled={isPending} />
+          </SettingRow>
+          <SettingRow title="Control bar position" description="Choose top, bottom, or floating controls.">
+            <SelectControl value={settings.controlBarPosition} options={[{ value: "top", label: "Top" }, { value: "bottom", label: "Bottom" }, { value: "floating", label: "Floating" }]} onChange={(value) => setSetting("controlBarPosition", value, "Control position updated.")} />
+          </SettingRow>
+          <SettingRow title="Default server behavior" description="Auto-pick, ask every time, or use last server.">
+            <SelectControl value={settings.defaultServerBehavior} options={[{ value: "auto", label: "Auto" }, { value: "ask-every-time", label: "Ask every time" }, { value: "last-used", label: "Last used" }]} onChange={(value) => setSetting("defaultServerBehavior", value, "Server behavior updated.")} />
+          </SettingRow>
+          <SettingRow title="Show server switcher" description="Allow manual server switching.">
+            <ToggleSwitch checked={settings.enableServerSwitcher} onChange={(checked) => setSetting("enableServerSwitcher", checked, "Server switcher updated.")} disabled={isPending} />
+          </SettingRow>
+          <SettingRow title="Show report provider button" description="Allow provider reports from the player.">
+            <ToggleSwitch checked={settings.featureToggles.providerReports} onChange={(checked) => setFeatureToggle("providerReports", checked)} disabled={isPending} />
+          </SettingRow>
+          <SettingRow title="Show TV/Mirror button" description="Show screen mirroring controls.">
+            <ToggleSwitch checked={settings.showTvMirrorButton} onChange={(checked) => setSetting("showTvMirrorButton", checked, "TV mirror button updated.")} disabled={isPending} />
+          </SettingRow>
+          <SettingRow title="Auto fullscreen on play" description="Request fullscreen when playback starts if supported.">
+            <ToggleSwitch checked={settings.autoFullscreenOnPlay} onChange={(checked) => setSetting("autoFullscreenOnPlay", checked, "Auto fullscreen updated.")} disabled={isPending} />
+          </SettingRow>
+          <SettingRow title="Remember last provider" description="Reuse the last selected server when possible.">
+            <ToggleSwitch checked={settings.rememberLastProvider} onChange={(checked) => setSetting("rememberLastProvider", checked, "Remember provider updated.")} disabled={isPending} />
+          </SettingRow>
+          <SettingRow title="Playback warnings" description="Show risk and compatibility warnings.">
+            <ToggleSwitch checked={settings.showPlaybackWarnings} onChange={(checked) => setSetting("showPlaybackWarnings", checked, "Playback warnings updated.")} disabled={isPending} />
+          </SettingRow>
         </Section>
       </div>
 
@@ -673,7 +932,19 @@ export function SettingsPanel() {
             <Link href="/terms" className="inline-flex min-h-11 items-center rounded-full border border-white/10 bg-white/8 px-5 text-sm font-semibold text-white">
               Terms page
             </Link>
+            <Link href="/privacy" className="inline-flex min-h-11 items-center rounded-full border border-white/10 bg-white/8 px-5 text-sm font-semibold text-white">
+              Privacy page
+            </Link>
+            <Link href="/contact" className="inline-flex min-h-11 items-center rounded-full border border-white/10 bg-white/8 px-5 text-sm font-semibold text-white">
+              Contact page
+            </Link>
           </div>
+          <SettingRow title="Show playback warning" description="Show playback warning and consent before third-party providers.">
+            <ToggleSwitch checked={settings.showPlaybackWarnings} onChange={(checked) => setSetting("showPlaybackWarnings", checked, "Playback warning updated.")} disabled={isPending} />
+          </SettingRow>
+          <SettingRow title="Under-13 safe page" description="Keep the under-13 safer exit flow enabled.">
+            <ToggleSwitch checked={settings.under13SafePageEnabled} onChange={(checked) => setSetting("under13SafePageEnabled", checked, "Under-13 page setting updated.")} disabled={isPending} />
+          </SettingRow>
           <SettingRow title="SAFE_MODE" description="Strict mode watches links, popups, redirects, and overlay traps.">
             <ToggleSwitch
               checked={settings.safeMode}
@@ -842,7 +1113,7 @@ export function SettingsPanel() {
         ) : null}
       </Section>
 
-      <Section icon={Bug} title="Admin / Debug" description="Safe diagnostics and local data tools. Secrets and webhook URLs are never shown here.">
+      <Section icon={Bug} title="Data & Sync / Admin" description="Safe diagnostics and local data tools. Secrets and webhook URLs are never shown here.">
         <div className="grid gap-3 md:grid-cols-2">
           <SettingRow title="Show build/version info" description="Show local build information in admin panels.">
             <ToggleSwitch
@@ -867,6 +1138,35 @@ export function SettingsPanel() {
           </div>
         ) : null}
         <div className="flex flex-wrap gap-3">
+          <button
+            type="button"
+            onClick={() => {
+              window.localStorage.removeItem(WATCHLIST_STORAGE_KEY);
+              queryClient.setQueryData(queryKeys.watchlist, []);
+              toast.success("Watchlist cleared.");
+            }}
+            className="inline-flex min-h-11 items-center rounded-full border border-white/10 bg-white/8 px-5 text-sm font-semibold text-white"
+          >
+            Clear watchlist
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              window.localStorage.removeItem(PROGRESS_STORAGE_KEY);
+              queryClient.setQueryData(queryKeys.continueWatching, []);
+              toast.success("Continue watching cleared.");
+            }}
+            className="inline-flex min-h-11 items-center rounded-full border border-white/10 bg-white/8 px-5 text-sm font-semibold text-white"
+          >
+            Clear continue watching
+          </button>
+          <button
+            type="button"
+            onClick={resetProviderPreferences}
+            className="inline-flex min-h-11 items-center rounded-full border border-white/10 bg-white/8 px-5 text-sm font-semibold text-white"
+          >
+            Clear provider preferences
+          </button>
           <button
             type="button"
             onClick={testMatrixFeedback}

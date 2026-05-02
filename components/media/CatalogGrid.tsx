@@ -13,6 +13,7 @@ import { useSettingsContext } from "@/context/SettingsContext";
 import { filterByYear, useFilters } from "@/hooks/useFilters";
 import { useInfiniteMedia } from "@/hooks/useInfiniteMedia";
 import { useRecommendations } from "@/hooks/useRecommendations";
+import { cn } from "@/lib/cn";
 import { queryKeys } from "@/lib/queryKeys";
 import { mediaItemToRecommendationItem, trackSearchQuery } from "@/lib/recommendationEngine";
 import { getClientGenres } from "@/lib/tmdb/client";
@@ -146,6 +147,9 @@ export function CatalogGrid({
             actions={actions}
             yearOptions={yearOptions}
             hasActiveFilters={hasActiveFilters}
+            showGenres={settings.showGenreFilters}
+            showRatings={settings.showRatingFilters}
+            showYears={settings.showYearFilters}
           />
           </div>
       </div>
@@ -167,7 +171,22 @@ export function CatalogGrid({
               </div>
             ) : null}
 
-            <div className="grid grid-cols-2 gap-[var(--card-gap)] sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
+            <div
+              className={cn(
+                "grid gap-[var(--card-gap)]",
+                settings.gridColumns === "2"
+                  ? "grid-cols-2"
+                  : settings.gridColumns === "3"
+                    ? "grid-cols-2 md:grid-cols-3"
+                    : settings.gridColumns === "4"
+                      ? "grid-cols-2 sm:grid-cols-3 xl:grid-cols-4"
+                      : settings.gridColumns === "5"
+                        ? "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5"
+                        : settings.gridColumns === "6"
+                          ? "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6"
+                          : "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6",
+              )}
+            >
               {filteredResults.map((item) => (
                 <MovieCard key={`${item.mediaType}-${item.id}`} media={item} />
               ))}

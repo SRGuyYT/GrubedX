@@ -26,13 +26,13 @@ export function HeroCarousel({ items }: { items: MediaItem[] }) {
   });
 
   useEffect(() => {
-    if (!settings.enableAnimations || items.length <= 1) {
+    if (!settings.enableAnimations || !settings.autoRotateHero || items.length <= 1) {
       return;
     }
 
-    const timer = window.setInterval(() => advance(), 8000);
+    const timer = window.setInterval(() => advance(), settings.heroRotationSpeed);
     return () => window.clearInterval(timer);
-  }, [advance, items.length, settings.enableAnimations]);
+  }, [advance, items.length, settings.autoRotateHero, settings.enableAnimations, settings.heroRotationSpeed]);
 
   if (!activeItem) {
     return null;
@@ -40,7 +40,7 @@ export function HeroCarousel({ items }: { items: MediaItem[] }) {
 
   return (
     <>
-      <section className="relative -mt-[calc(4.75rem+env(safe-area-inset-top))] overflow-hidden border-b border-white/8 md:-mt-[calc(5.5rem+env(safe-area-inset-top))]">
+      <section className={cn("relative -mt-[calc(4.75rem+env(safe-area-inset-top))] overflow-hidden border-b border-white/8 md:-mt-[calc(5.5rem+env(safe-area-inset-top))]", settings.heroStyle === "compact" ? "max-h-[680px]" : "")}>
         <div className="absolute inset-0">
           {items.slice(0, 5).map((item, index) => (
             <div
@@ -77,7 +77,7 @@ export function HeroCarousel({ items }: { items: MediaItem[] }) {
           <div className="relative z-10 w-full max-w-[22rem] sm:max-w-3xl">
             <p className="mb-4 text-xs font-semibold uppercase tracking-[0.38em] text-[var(--accent)]">Featured tonight</p>
             <h1 className="max-w-full text-5xl font-bold leading-none text-white sm:max-w-2xl sm:text-6xl md:text-7xl">
-              {activeItem.title}
+              {settings.homeHeroTitle || activeItem.title}
             </h1>
             <div className="mt-5 flex flex-wrap items-center gap-2 text-sm font-semibold text-white/82">
               {activeItem.rating ? (
@@ -94,7 +94,7 @@ export function HeroCarousel({ items }: { items: MediaItem[] }) {
               <span className="rounded-full border border-white/10 bg-black/42 px-3 py-1.5 capitalize">{activeItem.mediaType}</span>
             </div>
             <p className="mt-6 w-full max-w-[22rem] break-words text-base font-medium leading-8 text-white/74 sm:max-w-2xl sm:text-lg">
-              {activeItem.overview}
+              {settings.homeHeroSubtitle || activeItem.overview}
             </p>
             <div className="mt-8 grid w-full max-w-[22rem] grid-cols-2 gap-3 sm:flex sm:max-w-none sm:flex-wrap sm:items-center">
               <Link

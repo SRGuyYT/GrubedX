@@ -13,7 +13,9 @@ export function FilterPanel({
   actions,
   yearOptions,
   ratingOptions = CONTENT_RATING_OPTIONS,
+  showGenres = true,
   showRatings = true,
+  showYears = true,
   hasActiveFilters,
 }: {
   title?: string;
@@ -23,7 +25,9 @@ export function FilterPanel({
   actions: FilterActions;
   yearOptions: number[];
   ratingOptions?: readonly string[];
+  showGenres?: boolean;
   showRatings?: boolean;
+  showYears?: boolean;
   hasActiveFilters: boolean;
 }) {
   return (
@@ -51,6 +55,7 @@ export function FilterPanel({
       </div>
 
       <div className="mt-5 grid gap-5">
+        {showGenres ? (
         <div>
           <p className="mb-2 text-xs font-semibold uppercase tracking-[0.24em] text-[var(--muted)]">{genreLabel}</p>
           <div className="scrollbar-hidden flex gap-2 overflow-x-auto pb-1 md:flex-wrap md:overflow-visible">
@@ -74,6 +79,7 @@ export function FilterPanel({
             })}
           </div>
         </div>
+        ) : null}
 
         {showRatings && ratingOptions.length > 0 ? (
           <div>
@@ -101,6 +107,7 @@ export function FilterPanel({
           </div>
         ) : null}
 
+        {showYears ? (
         <div>
           <p className="mb-2 text-xs font-semibold uppercase tracking-[0.24em] text-[var(--muted)]">Release Year</p>
           <div className="mb-4 rounded-[1rem] border border-white/8 bg-black/24 px-4 py-4">
@@ -158,6 +165,7 @@ export function FilterPanel({
             </label>
           </div>
         </div>
+        ) : null}
       </div>
     </section>
   );

@@ -376,7 +376,7 @@ export function PlaybackTheater({
       setSelectedProvider(null);
       setManualProvider(false);
       setControlsUnlocked(false);
-      setControlDock("top");
+      setControlDock(settings.controlBarPosition === "bottom" ? "bottom" : "top");
       setWatchHistory([]);
       setAttemptedProviders(new Set());
       setIframeFailed(false);
@@ -396,7 +396,7 @@ export function PlaybackTheater({
     setSelectedProvider((readPreferredProvider() ?? settings.defaultProvider) as GrubXProviderId | null);
     setManualProvider(false);
     setControlsUnlocked(false);
-    setControlDock("top");
+    setControlDock(settings.controlBarPosition === "bottom" ? "bottom" : "top");
     setAttemptedProviders(new Set());
     setIframeFailed(false);
     setPopupSuspected(false);
@@ -406,7 +406,7 @@ export function PlaybackTheater({
     setControlsVisible(true);
     activatedAtRef.current = null;
     setWatchHistory(getWatchHistory());
-  }, [open, settings.defaultProvider, settings.theaterModeDefault]);
+  }, [open, settings.controlBarPosition, settings.defaultProvider, settings.theaterModeDefault]);
 
   useEffect(() => {
     if (!open) {
@@ -443,7 +443,7 @@ export function PlaybackTheater({
   }, [onClose, open, router, settings.showPlaybackWarnings]);
 
   useEffect(() => {
-    if (!open || !controlsVisible) {
+    if (!open || !controlsVisible || !settings.autoHidePlayerControls) {
       return;
     }
 
@@ -452,7 +452,7 @@ export function PlaybackTheater({
     }, 2000);
 
     return () => window.clearTimeout(timeout);
-  }, [controlsVisible, open]);
+  }, [controlsVisible, open, settings.autoHidePlayerControls]);
 
   useEffect(() => {
     setControlsUnlocked(false);
@@ -973,7 +973,7 @@ export function PlaybackTheater({
               >
                 <Maximize2 className="size-5" />
               </button>
-              {settings.featureToggles.tvModeScreenMirroring ? (
+              {settings.featureToggles.tvModeScreenMirroring && settings.showTvMirrorButton ? (
                 <ScreenMirrorButton
                   target={iframeRef.current}
                   label="Mirror"
