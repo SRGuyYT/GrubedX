@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import {
   Bot,
   Clapperboard,
+  Sparkles,
   Home,
   Music,
   MonitorPlay,
@@ -35,6 +36,7 @@ const navItems: NavItem[] = [
   { href: "/movies", label: "Movies", icon: Clapperboard, feature: "movies" },
   { href: "/tv", label: "TV", icon: Tv, feature: "tv" },
   { href: "/live", label: "Live TV", icon: MonitorPlay, feature: "live" },
+  { href: "/anime", label: "Anime", icon: Sparkles, feature: "anime" },
   { href: "/youtube", label: "YouTube", icon: Youtube, feature: "youtube" },
   { href: "/tiktok", label: "TikTok", icon: Video, feature: "tiktok" },
   { href: "/spotify", label: "Spotify", icon: Music, feature: "spotify" },
@@ -91,15 +93,15 @@ export function Navbar() {
   const pathname = usePathname();
   const { settings } = useSettingsContext();
   const nav = useMemo(() => {
-    const aiServerUrl = process.env.NEXT_PUBLIC_AI_SERVER_URL || "https://xthat.sky0cloud.dpdns.org";
+    const aiServerUrl = settings.aiServerUrl || process.env.NEXT_PUBLIC_AI_SERVER_URL || "https://xthat.sky0cloud.dpdns.org";
     return navItems
       .filter((item) => !item.feature || settings.featureToggles[item.feature])
       .map((item) =>
         item.feature === "aiServer" && settings.aiOpenMode === "new-tab"
-          ? { ...item, href: aiServerUrl, external: true }
+          ? { ...item, href: aiServerUrl, label: settings.aiServerLabel || item.label, external: true }
           : item,
       );
-  }, [settings.aiOpenMode, settings.featureToggles]);
+  }, [settings.aiOpenMode, settings.aiServerLabel, settings.aiServerUrl, settings.featureToggles]);
   const [playerChromeHidden, setPlayerChromeHidden] = useState(false);
 
   useEffect(() => {

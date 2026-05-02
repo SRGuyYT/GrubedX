@@ -37,6 +37,7 @@ export type FeatureToggles = {
   movies: boolean;
   tv: boolean;
   live: boolean;
+  anime: boolean;
   youtube: boolean;
   spotify: boolean;
   tiktok: boolean;

@@ -117,6 +117,7 @@ const featureRows: Array<{ key: keyof Settings["featureToggles"]; title: string;
   { key: "movies", title: "Movies", description: "Movie catalog, title pages, and movie playback." },
   { key: "tv", title: "TV", description: "TV catalog, seasons, episodes, and TV playback." },
   { key: "live", title: "Live TV", description: "Live TV and sports page." },
+  { key: "anime", title: "Anime", description: "Anime Nexus inside GrubX." },
   { key: "youtube", title: "YouTube", description: "YouTube search and embeds." },
   { key: "spotify", title: "Spotify / Music", description: "Spotify login, search, embeds, and music tools." },
   { key: "tiktok", title: "TikTok", description: "TikTok search and link embeds." },
@@ -628,7 +629,7 @@ export function SettingsPanel() {
           </SettingRow>
           <div className="grid gap-3 md:grid-cols-2">
             {featureRows
-              .filter((feature) => ["movies", "tv", "live", "youtube", "spotify", "tiktok", "search", "aiServer"].includes(feature.key))
+              .filter((feature) => ["movies", "tv", "live", "anime", "youtube", "spotify", "tiktok", "search", "aiServer"].includes(feature.key))
               .map((feature) => (
                 <SettingRow key={feature.key} title={`Show ${feature.title}`} description="Show or hide this item in navigation.">
                   <ToggleSwitch checked={settings.featureToggles[feature.key]} onChange={(checked) => setFeatureToggle(feature.key, checked)} disabled={isPending} />

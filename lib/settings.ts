@@ -17,6 +17,7 @@ export const DEFAULT_FEATURE_TOGGLES: Settings["featureToggles"] = {
   movies: true,
   tv: true,
   live: true,
+  anime: true,
   youtube: true,
   spotify: true,
   tiktok: true,
@@ -76,7 +77,7 @@ export const DEFAULT_SETTINGS: Settings = {
   showCardDescriptions: true,
   showNavLabels: true,
   showNavIcons: true,
-  navItemOrder: ["home", "movies", "tv", "live", "youtube", "tiktok", "spotify", "aiServer", "search", "settings"],
+  navItemOrder: ["home", "movies", "tv", "live", "anime", "youtube", "tiktok", "spotify", "aiServer", "search", "settings"],
   showHomeHero: true,
   heroStyle: "full-bleed",
   autoRotateHero: true,
@@ -154,6 +155,17 @@ const readEnum = <T extends string>(value: unknown, options: readonly T[], fallb
 
 const readNumberEnum = <T extends number>(value: unknown, options: readonly T[], fallback: T): T =>
   typeof value === "number" && options.includes(value as T) ? (value as T) : fallback;
+
+const readString = (value: unknown, fallback: string, maxLength = 240) =>
+  typeof value === "string" ? value.trim().slice(0, maxLength) || fallback : fallback;
+
+const readNumberRange = (value: unknown, fallback: number, min: number, max: number) =>
+  typeof value === "number" && Number.isFinite(value) ? Math.min(max, Math.max(min, value)) : fallback;
+
+const readStringArray = (value: unknown, fallback: string[], maxItems = 16) =>
+  Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === "string").map((item) => item.trim()).filter(Boolean).slice(0, maxItems)
+    : fallback;
 
 const readFeatureToggles = (value: unknown) => {
   const input = typeof value === "object" && value !== null ? (value as Record<string, unknown>) : {};
@@ -248,6 +260,58 @@ export const sanitizeSettings = (input?: Partial<Settings> | null): Settings => 
   aiOpenMode: readEnum(input?.aiOpenMode, ["same-tab", "new-tab"], DEFAULT_SETTINGS.aiOpenMode),
   showBuildInfo: readBoolean(input?.showBuildInfo, DEFAULT_SETTINGS.showBuildInfo),
   showUpdateStatus: readBoolean(input?.showUpdateStatus, DEFAULT_SETTINGS.showUpdateStatus),
+  websitePreset: readEnum(input?.websitePreset, ["cinematic-console", "minimal", "amoled", "glass", "compact", "big-screen-tv", "mobile-friendly"], DEFAULT_SETTINGS.websitePreset),
+  websiteName: readString(input?.websiteName, DEFAULT_SETTINGS.websiteName, 80),
+  websiteSubtitle: readString(input?.websiteSubtitle, DEFAULT_SETTINGS.websiteSubtitle, 180),
+  showLogo: readBoolean(input?.showLogo, DEFAULT_SETTINGS.showLogo),
+  logoSize: readEnum(input?.logoSize, ["small", "medium", "large"], DEFAULT_SETTINGS.logoSize),
+  homeHeroTitle: readString(input?.homeHeroTitle, DEFAULT_SETTINGS.homeHeroTitle, 120),
+  homeHeroSubtitle: readString(input?.homeHeroSubtitle, DEFAULT_SETTINGS.homeHeroSubtitle, 240),
+  footerText: readString(input?.footerText, DEFAULT_SETTINGS.footerText, 240),
+  aiServerLabel: readString(input?.aiServerLabel, DEFAULT_SETTINGS.aiServerLabel, 80),
+  aiServerUrl: readString(input?.aiServerUrl, DEFAULT_SETTINGS.aiServerUrl, 500),
+  themePreference: readEnum(input?.themePreference, ["system", "dark", "amoled"], DEFAULT_SETTINGS.themePreference),
+  accentColor: readString(input?.accentColor, DEFAULT_SETTINGS.accentColor, 24),
+  backgroundStyle: readEnum(input?.backgroundStyle, ["solid", "cinematic-gradient", "glass", "minimal"], DEFAULT_SETTINGS.backgroundStyle),
+  panelOpacity: readNumberRange(input?.panelOpacity, DEFAULT_SETTINGS.panelOpacity, 0, 0.2),
+  borderStrength: readNumberRange(input?.borderStrength, DEFAULT_SETTINGS.borderStrength, 0, 0.35),
+  shadowStrength: readNumberRange(input?.shadowStrength, DEFAULT_SETTINGS.shadowStrength, 0, 0.8),
+  textSize: readEnum(input?.textSize, ["small", "normal", "large"], DEFAULT_SETTINGS.textSize),
+  highContrastMode: readBoolean(input?.highContrastMode, DEFAULT_SETTINGS.highContrastMode),
+  cardSize: readEnum(input?.cardSize, ["small", "medium", "large"], DEFAULT_SETTINGS.cardSize),
+  customCardDensity: readEnum(input?.customCardDensity, ["compact", "comfortable", "spacious"], DEFAULT_SETTINGS.customCardDensity),
+  posterShape: readEnum(input?.posterShape, ["sharp", "rounded", "extra-rounded"], DEFAULT_SETTINGS.posterShape),
+  rowSpacing: readEnum(input?.rowSpacing, ["compact", "comfortable", "spacious"], DEFAULT_SETTINGS.rowSpacing),
+  gridColumns: readEnum(input?.gridColumns, ["auto", "2", "3", "4", "5", "6"], DEFAULT_SETTINGS.gridColumns),
+  showCardMetadata: readBoolean(input?.showCardMetadata, DEFAULT_SETTINGS.showCardMetadata),
+  showCardDescriptions: readBoolean(input?.showCardDescriptions, DEFAULT_SETTINGS.showCardDescriptions),
+  showNavLabels: readBoolean(input?.showNavLabels, DEFAULT_SETTINGS.showNavLabels),
+  showNavIcons: readBoolean(input?.showNavIcons, DEFAULT_SETTINGS.showNavIcons),
+  navItemOrder: readStringArray(input?.navItemOrder, DEFAULT_SETTINGS.navItemOrder, 16),
+  showHomeHero: readBoolean(input?.showHomeHero, DEFAULT_SETTINGS.showHomeHero),
+  heroStyle: readEnum(input?.heroStyle, ["full-bleed", "compact", "poster-focused"], DEFAULT_SETTINGS.heroStyle),
+  autoRotateHero: readBoolean(input?.autoRotateHero, DEFAULT_SETTINGS.autoRotateHero),
+  heroRotationSpeed: readNumberRange(input?.heroRotationSpeed, DEFAULT_SETTINGS.heroRotationSpeed, 2500, 20000),
+  showTrendingRows: readBoolean(input?.showTrendingRows, DEFAULT_SETTINGS.showTrendingRows),
+  defaultHomeSections: readStringArray(input?.defaultHomeSections, DEFAULT_SETTINGS.defaultHomeSections, 16),
+  homeSectionOrder: readStringArray(input?.homeSectionOrder, DEFAULT_SETTINGS.homeSectionOrder, 16),
+  defaultMediaPage: readEnum(input?.defaultMediaPage, ["movies", "tv", "home"], DEFAULT_SETTINGS.defaultMediaPage),
+  defaultSort: readEnum(input?.defaultSort, ["popular", "trending", "top-rated", "newest"], DEFAULT_SETTINGS.defaultSort),
+  defaultFilters: readStringArray(input?.defaultFilters, DEFAULT_SETTINGS.defaultFilters, 24),
+  showGenreFilters: readBoolean(input?.showGenreFilters, DEFAULT_SETTINGS.showGenreFilters),
+  showRatingFilters: readBoolean(input?.showRatingFilters, DEFAULT_SETTINGS.showRatingFilters),
+  showYearFilters: readBoolean(input?.showYearFilters, DEFAULT_SETTINGS.showYearFilters),
+  resultsPerPage: readNumberRange(input?.resultsPerPage, DEFAULT_SETTINGS.resultsPerPage, 8, 60),
+  infiniteScroll: readBoolean(input?.infiniteScroll, DEFAULT_SETTINGS.infiniteScroll),
+  playerLayout: readEnum(input?.playerLayout, ["fullscreen-overlay", "theater", "compact"], DEFAULT_SETTINGS.playerLayout),
+  autoHidePlayerControls: readBoolean(input?.autoHidePlayerControls, DEFAULT_SETTINGS.autoHidePlayerControls),
+  controlBarPosition: readEnum(input?.controlBarPosition, ["top", "bottom", "floating"], DEFAULT_SETTINGS.controlBarPosition),
+  defaultServerBehavior: readEnum(input?.defaultServerBehavior, ["auto", "ask-every-time", "last-used"], DEFAULT_SETTINGS.defaultServerBehavior),
+  showTvMirrorButton: readBoolean(input?.showTvMirrorButton, DEFAULT_SETTINGS.showTvMirrorButton),
+  autoFullscreenOnPlay: readBoolean(input?.autoFullscreenOnPlay, DEFAULT_SETTINGS.autoFullscreenOnPlay),
+  rememberLastProvider: readBoolean(input?.rememberLastProvider, DEFAULT_SETTINGS.rememberLastProvider),
+  tiktokEmbedMode: readEnum(input?.tiktokEmbedMode, ["embed", "link-fallback"], DEFAULT_SETTINGS.tiktokEmbedMode),
+  under13SafePageEnabled: readBoolean(input?.under13SafePageEnabled, DEFAULT_SETTINGS.under13SafePageEnabled),
   providerSettings: readProviderSettings(input?.providerSettings),
   customProviders: sanitizeCustomProviders(input?.customProviders),
   autoplayTrailers: readBoolean(input?.autoplayTrailers, DEFAULT_SETTINGS.autoplayTrailers),
